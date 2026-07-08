@@ -1,0 +1,18 @@
+name = "running-coach-strava"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Created by `wrangler kv namespace create STRAVA_KV` — paste the id it prints below.
+kv_namespaces = [
+  { binding = "STRAVA_KV", id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID" }
+]
+
+[vars]
+# The URL your app is actually served from (GitHub Pages, Netlify, etc).
+# No trailing slash. The Worker redirects back here after Strava auth.
+APP_URL = "https://yourusername.github.io/your-repo"
+# Usually the scheme+host of APP_URL, e.g. "https://yourusername.github.io"
+ALLOWED_ORIGIN = "https://yourusername.github.io"
+
+# STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET are set as secrets, NOT here —
+# see SETUP.md. Secrets never get written to a file or committed to git.
