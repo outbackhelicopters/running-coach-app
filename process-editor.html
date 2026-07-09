@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Process Editor — Tom McGookin Running</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:   #0A1930;
+    --paper: #F1EEE2;
+    --card:  #FFFFFF;
+    --rust:  #FF5A4E;
+    --moss:  #17B6C4;
+    --dusk:  #123A5E;
+    --line: rgba(10,25,48,0.12);
+    --shadow: 0 1px 2px rgba(10,25,48,0.06), 0 4px 16px rgba(10,25,48,0.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;margin:0 0 .3em;letter-spacing:-.01em;}
+  p{margin:0 0 1em;}
+  .muted{color:rgba(10,25,48,0.6);font-size:.92rem;}
+  .container{max-width:760px;margin:0 auto;padding:0 20px;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:11px 18px;border-radius:9px;border:1px solid transparent;
+    font-size:.92rem;font-weight:700;cursor:pointer;text-decoration:none;
+    font-family:inherit;transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-primary{background:var(--rust);color:#fff;box-shadow:0 6px 16px rgba(255,90,78,0.25);}
+  .btn-primary:hover{transform:translateY(-1px);}
+  .btn-secondary{background:transparent;color:var(--ink);border-color:var(--line);}
+  .btn-secondary:hover{background:rgba(10,25,48,0.05);}
+  .btn-ghost{background:none;border:none;color:var(--dusk);font-weight:600;cursor:pointer;font-size:.85rem;padding:4px;}
+  .btn-sm{padding:6px 12px;font-size:.8rem;}
+
+  header.top{background:var(--ink);color:#fff;padding:28px 0;}
+  header.top .badge{
+    display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.16);color:rgba(255,255,255,0.85);
+    font-size:.72rem;font-weight:600;letter-spacing:.03em;padding:4px 10px;border-radius:20px;margin-bottom:10px;
+  }
+  header.top h1{font-size:1.6rem;color:#fff;margin-bottom:6px;}
+  header.top p{color:rgba(255,255,255,0.65);margin:0;font-size:.92rem;}
+
+  .instructions{
+    background:#FFF7EC;border:1px solid #F0D9AE;border-radius:12px;
+    padding:16px 18px;margin:24px 0;font-size:.88rem;
+  }
+  .instructions strong{color:var(--ink);}
+  .instructions ol{margin:8px 0 0;padding-left:20px;}
+  .instructions li{margin-bottom:4px;}
+
+  main{padding:8px 0 60px;}
+  .section-title{display:flex;align-items:center;justify-content:space-between;margin:32px 0 14px;}
+  .section-title h2{font-size:1.15rem;margin:0;}
+
+  .stage-list{position:relative;}
+  .stage-list::before{
+    content:"";position:absolute;left:23px;top:10px;bottom:10px;width:2px;
+    background:var(--line);z-index:0;
+  }
+  .stage-item{
+    position:relative;z-index:1;display:flex;gap:14px;background:var(--card);
+    border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;
+    box-shadow:var(--shadow);
+  }
+  .stage-item.dragging{opacity:.4;}
+  .stage-item.drag-over{border-color:var(--moss);}
+  .drag-handle{
+    cursor:grab;color:rgba(10,25,48,0.3);font-size:1.1rem;line-height:1;
+    display:flex;align-items:flex-start;padding-top:6px;user-select:none;
+  }
+  .num-badge{
+    flex:0 0 32px;width:32px;height:32px;border-radius:50%;background:var(--ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;
+    margin-top:2px;
+  }
+  .stage-fields{flex:1;min-width:0;}
+  .stage-fields input[type=text]{
+    width:100%;border:1px solid transparent;border-radius:6px;padding:6px 8px;
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1rem;color:var(--ink);
+    background:transparent;margin-bottom:6px;
+  }
+  .stage-fields input[type=text]:hover,.stage-fields input[type=text]:focus{background:rgba(10,25,48,0.04);border-color:var(--line);outline:none;}
+  .stage-fields textarea{
+    width:100%;border:1px solid transparent;border-radius:6px;padding:6px 8px;
+    font-family:inherit;font-size:.88rem;color:rgba(10,25,48,0.75);background:transparent;
+    resize:vertical;min-height:44px;
+  }
+  .stage-fields textarea:hover,.stage-fields textarea:focus{background:rgba(10,25,48,0.04);border-color:var(--line);outline:none;}
+  .remove-btn{
+    flex:0 0 auto;background:none;border:none;color:rgba(10,25,48,0.35);cursor:pointer;
+    font-size:1.1rem;padding:4px 6px;border-radius:6px;height:fit-content;
+  }
+  .remove-btn:hover{color:var(--rust);background:rgba(255,90,78,0.08);}
+
+  .add-stage-btn{
+    width:100%;border:2px dashed var(--line);background:transparent;border-radius:14px;
+    padding:14px;font-weight:700;color:var(--dusk);cursor:pointer;font-size:.9rem;
+    font-family:inherit;margin-bottom:14px;
+  }
+  .add-stage-btn:hover{border-color:var(--moss);color:var(--moss);}
+
+  .actions-bar{
+    display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:24px;
+  }
+  .actions-bar .left{display:flex;gap:10px;flex-wrap:wrap;}
+  .save-state{font-size:.78rem;color:rgba(10,25,48,0.5);}
+
+  .code-box{
+    display:none;margin-top:16px;background:var(--ink);color:#dce8f0;border-radius:12px;
+    padding:16px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.8rem;
+    white-space:pre-wrap;word-break:break-word;max-height:320px;overflow:auto;
+  }
+  .code-box.show{display:block;}
+
+  /* Preview replicating the live site's process cards */
+  .preview-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-top:12px;}
+  .stage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;}
+  .preview-card{background:#FAFAF7;border:1px solid var(--line);border-radius:12px;padding:16px 18px;}
+  .preview-card .num{
+    display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;
+    background:var(--ink);color:#fff;font-size:.75rem;font-weight:700;margin-bottom:8px;
+  }
+  .preview-card h4{margin:0 0 4px;font-size:.95rem;}
+  .preview-card p{font-size:.8rem;color:rgba(10,25,48,0.6);margin:0;}
+
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
+    padding:10px 18px;border-radius:8px;font-size:.85rem;z-index:100;box-shadow:var(--shadow);
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="container">
+    <div class="badge">🏃 Process Editor</div>
+    <h1>Update your coaching process</h1>
+    <p>Edit the stages shown to prospects on your website — no code needed. Drag to reorder, click any text to edit it.</p>
+  </div>
+</header>
+
+<main class="container">
+  <div class="instructions">
+    <strong>How this works:</strong> this page is a standalone editor — your changes save automatically in this browser as you work, but they don't update the live website by themselves (there's no live connection between this file and your site).
+    <ol>
+      <li>Edit, reorder, add or remove stages below.</li>
+      <li>Check the preview at the bottom to see how it'll look to visitors.</li>
+      <li>When you're happy, click <strong>"Copy code for website"</strong> and send that text back so it can be pasted into the site and published.</li>
+    </ol>
+  </div>
+
+  <div class="section-title">
+    <h2>Your process</h2>
+    <button class="btn-ghost" id="resetBtn">Reset to original</button>
+  </div>
+
+  <div class="stage-list" id="stageList"></div>
+
+  <button class="add-stage-btn" id="addStageBtn">+ Add a stage</button>
+
+  <div class="actions-bar">
+    <div class="left">
+      <button class="btn btn-primary btn-sm" id="copyCodeBtn">Copy code for website</button>
+      <button class="btn btn-secondary btn-sm" id="downloadBtn">Download backup (.json)</button>
+    </div>
+    <span class="save-state" id="saveState">Saved in this browser ✓</span>
+  </div>
+
+  <div class="code-box" id="codeBox"></div>
+
+  <div class="section-title">
+    <h2>Preview — what visitors see</h2>
+  </div>
+  <div class="preview-wrap">
+    <div class="stage-grid" id="previewGrid"></div>
+  </div>
+</main>
+
+<script>
+const STORAGE_KEY = "rc_process_editor_stages_v1";
+
+const DEFAULT_STAGES = [
+  { name: "New Inquiry", blurb: "You reach out, I reply within a day and send over the athlete questionnaire." },
+  { name: "Questionnaire Sent", blurb: "Questionnaire link is in your inbox — running history, lifestyle, medical, goal." },
+  { name: "Questionnaire Completed", blurb: "I review your answers before we speak, so the call is useful, not generic." },
+  { name: "Discovery Call Booked", blurb: "A free 20-30 min call to talk through your goal race and how coaching works." },
+  { name: "Discovery Call Completed", blurb: "We've spoken — I'm building your first training block and pace zones." },
+  { name: "Plan Built", blurb: "Your plan is ready: sessions, pace zones, and how we'll communicate weekly." },
+  { name: "Active Coaching", blurb: "Weekly check-ins and monthly reviews keep the plan matched to your life." },
+  { name: "Race Week", blurb: "Final week before race day — taper, logistics, and last-minute questions." },
+  { name: "Debrief & Testimonial", blurb: "We debrief the race, capture lessons, and (hopefully) grab a testimonial." }
+];
+
+let stages = loadStages();
+let dragSrcIndex = null;
+
+function loadStages(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(Array.isArray(parsed) && parsed.length) return parsed;
+    }
+  }catch(e){}
+  return DEFAULT_STAGES.map(s => ({...s}));
+}
+function saveStages(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(stages));
+  const el = document.getElementById("saveState");
+  el.textContent = "Saved in this browser ✓";
+  el.style.color = "";
+}
+function esc(s){ return (s==null?"":String(s)).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function toast(msg){
+  const t=document.createElement("div"); t.className="toast"; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2400);
+}
+
+function render(){
+  renderList();
+  renderPreview();
+  document.getElementById("codeBox").classList.remove("show");
+}
+
+function renderList(){
+  const list = document.getElementById("stageList");
+  list.innerHTML = stages.map((s,i)=>`
+    <div class="stage-item" draggable="true" data-index="${i}">
+      <div class="drag-handle" title="Drag to reorder">⠿</div>
+      <div class="num-badge">${i+1}</div>
+      <div class="stage-fields">
+        <input type="text" data-field="name" data-index="${i}" value="${esc(s.name)}" placeholder="Stage name">
+        <textarea data-field="blurb" data-index="${i}" placeholder="One line describing this stage to a prospect">${esc(s.blurb)}</textarea>
+      </div>
+      <button class="remove-btn" data-index="${i}" title="Remove stage">✕</button>
+    </div>
+  `).join("");
+
+  list.querySelectorAll("input[data-field], textarea[data-field]").forEach(el=>{
+    el.addEventListener("input", e=>{
+      const i = parseInt(e.target.dataset.index,10);
+      const field = e.target.dataset.field;
+      stages[i][field] = e.target.value;
+      saveStages();
+      renderPreview();
+      if(field === "name"){
+        // keep numbering/preview in sync without a full re-render that would steal focus
+      }
+    });
+  });
+  list.querySelectorAll(".remove-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const i = parseInt(btn.dataset.index,10);
+      if(stages.length <= 1){ toast("You need at least one stage"); return; }
+      stages.splice(i,1);
+      saveStages();
+      render();
+    });
+  });
+
+  list.querySelectorAll(".stage-item").forEach(item=>{
+    item.addEventListener("dragstart", e=>{
+      dragSrcIndex = parseInt(item.dataset.index,10);
+      item.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+    item.addEventListener("dragend", ()=>{
+      item.classList.remove("dragging");
+      list.querySelectorAll(".stage-item").forEach(el=>el.classList.remove("drag-over"));
+    });
+    item.addEventListener("dragover", e=>{
+      e.preventDefault();
+      item.classList.add("drag-over");
+    });
+    item.addEventListener("dragleave", ()=>{
+      item.classList.remove("drag-over");
+    });
+    item.addEventListener("drop", e=>{
+      e.preventDefault();
+      const targetIndex = parseInt(item.dataset.index,10);
+      if(dragSrcIndex === null || dragSrcIndex === targetIndex) return;
+      const [moved] = stages.splice(dragSrcIndex,1);
+      stages.splice(targetIndex,0,moved);
+      dragSrcIndex = null;
+      saveStages();
+      render();
+    });
+  });
+}
+
+function renderPreview(){
+  const grid = document.getElementById("previewGrid");
+  grid.innerHTML = stages.map((s,i)=>`
+    <div class="preview-card">
+      <span class="num">${i+1}</span>
+      <h4>${esc(s.name || "Untitled stage")}</h4>
+      <p>${esc(s.blurb || "")}</p>
+    </div>
+  `).join("");
+}
+
+document.getElementById("addStageBtn").addEventListener("click", ()=>{
+  stages.push({ name: "New Stage", blurb: "" });
+  saveStages();
+  render();
+});
+
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+  if(confirm("Reset back to the original 9 stages? This discards your edits in this browser.")){
+    stages = DEFAULT_STAGES.map(s => ({...s}));
+    saveStages();
+    render();
+  }
+});
+
+document.getElementById("copyCodeBtn").addEventListener("click", async ()=>{
+  const namesArr = stages.map(s => `    "${(s.name||"").replace(/"/g,'\\"')}"`).join(",\n");
+  const blurbsArr = stages.map(s => `    "${(s.blurb||"").replace(/"/g,'\\"')}"`).join(",\n");
+  const code = `STAGES: [\n${namesArr}\n  ],\n  STAGE_BLURBS: [\n${blurbsArr}\n  ]`;
+
+  const box = document.getElementById("codeBox");
+  box.textContent = code;
+  box.classList.add("show");
+
+  try{
+    await navigator.clipboard.writeText(code);
+    toast("Copied — send this back to update the site");
+  }catch(e){
+    toast("Couldn't auto-copy — select the text below and copy manually");
+  }
+});
+
+document.getElementById("downloadBtn").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), stages }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `coaching-process-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+render();
+</script>
+</body>
+</html>
