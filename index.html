@@ -267,6 +267,71 @@
   .badge-demo{background:var(--rust);color:#fff;font-size:.7rem;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.03em;margin-left:8px;vertical-align:middle;}
   .modal-backdrop{position:fixed;inset:0;background:rgba(21,24,28,0.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}
   .modal-box{background:var(--card);border-radius:14px;padding:26px;max-width:480px;width:100%;max-height:85vh;overflow:auto;}
+
+  /* overview cards (coach dashboard + progress tabs) */
+  .overview-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+  .ov-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;}
+  .ov-card.ov-warn{border-color:var(--rust);background:rgba(255,90,78,0.06);}
+  .ov-num{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.6rem;line-height:1.1;}
+  .ov-label{font-size:.78rem;color:rgba(21,24,28,0.6);margin-top:4px;}
+  .ov-sub{font-size:.72rem;color:rgba(21,24,28,0.45);margin-top:2px;}
+
+  .reminder-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line);font-size:.88rem;}
+  .reminder-row:last-child{border-bottom:none;}
+
+  /* race prep checklist */
+  .checklist-row{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:.92rem;cursor:pointer;}
+  .checklist-row input{width:auto;}
+
+  /* plan builder weeks */
+  .week-card.week-current{border-color:var(--rust);}
+  .week-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
+
+  /* simple bar chart (weekly km) */
+  .bar-chart{display:flex;align-items:flex-end;gap:10px;height:140px;overflow-x:auto;padding-top:8px;}
+  .bar-col{display:flex;flex-direction:column;align-items:center;gap:6px;flex:0 0 34px;height:100%;justify-content:flex-end;}
+  .bar-track{position:relative;width:20px;height:110px;background:rgba(21,24,28,0.05);border-radius:4px;display:flex;align-items:flex-end;overflow:hidden;}
+  .bar-planned{position:absolute;bottom:0;left:0;width:100%;background:var(--line);border-radius:4px;}
+  .bar-done{position:absolute;bottom:0;left:0;width:100%;background:var(--rust);border-radius:4px;}
+  .bar-label{font-size:.68rem;color:rgba(21,24,28,0.5);}
+
+  /* progress bars (athlete dashboard) */
+  .progress-bar-outer{width:100%;height:8px;border-radius:6px;background:rgba(21,24,28,0.08);overflow:hidden;}
+  .progress-bar-inner{height:100%;background:var(--rust);border-radius:6px;transition:width .3s ease;}
+
+  /* athlete-facing dashboard */
+  .athlete-view .dash-body.athlete-view-body{max-width:560px;margin:0 auto;padding-bottom:90px;}
+  .athlete-view .card{margin-bottom:16px;}
+  .av-welcome .av-greeting{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.3rem;margin-bottom:4px;}
+  .av-welcome .av-goal{font-weight:600;margin-bottom:2px;}
+  .av-next-workout .av-session-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.15rem;}
+  .celebrate-card{background:rgba(255,90,78,0.08);border-color:var(--rust);text-align:center;}
+
+  .week-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;}
+  .week-nav select{width:auto;}
+
+  .session-list{display:flex;flex-direction:column;gap:8px;}
+  .session-row{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden;}
+  .session-row.done{border-color:rgba(23,182,196,0.4);}
+  .session-row-head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;flex-wrap:wrap;}
+  .session-check{font-size:1rem;}
+  .session-day{font-size:.78rem;color:rgba(21,24,28,0.5);flex:0 0 auto;min-width:70px;}
+  .session-type{font-weight:700;flex:1 1 auto;}
+  .session-detail{padding:0 14px 14px;font-size:.9rem;}
+  .session-detail p{margin:0 0 8px;}
+
+  .achievement-list{display:flex;flex-wrap:wrap;gap:8px;}
+  .achievement-chip{background:rgba(255,90,78,0.1);color:var(--rust);border-radius:20px;padding:6px 12px;font-size:.8rem;font-weight:700;}
+
+  .bottom-nav{
+    position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);
+    display:flex;justify-content:space-around;padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:10;
+  }
+  .bottom-nav-item{
+    text-decoration:none;color:rgba(21,24,28,0.5);font-size:.72rem;font-weight:600;text-align:center;
+    padding:6px 8px;border-radius:8px;
+  }
+  .bottom-nav-item.active{color:var(--rust);background:rgba(255,90,78,0.08);}
 </style>
 </head>
 <body>
@@ -339,11 +404,11 @@ const CONFIG = {
   ],
 
   FAQS: [
-    { q: "Do I need running experience?", a: "Not at all — many athletes start with zero running background. Your plan is built around your current fitness, not a generic template." },
-    { q: "How often will we communicate?", a: "Weekly check-ins are built into every plan, plus you can message me anytime between sessions if something comes up." },
-    { q: "Can plans be adjusted?", a: "Always. Life happens — plans flex around travel, illness, injury, or a tough week at work. That's the point of having a coach instead of a static plan." },
-    { q: "What if I miss sessions?", a: "One missed session won't derail your training. I'll adjust the week around it rather than trying to force you to catch up." },
-    { q: "What races do you coach for?", a: "Everything from a first 5K to marathons and beyond — road, trail, whatever your goal race is." }
+    { q: "Do I need running experience?", a: "Not at all. I work with runners of all experience levels, from complete beginners training for their first 5K to experienced runners preparing for races and personal bests. Your training plan will be tailored to your current fitness level and goals." },
+    { q: "How often will we communicate?", a: "I check in with athletes weekly to review training, answer questions, and make any necessary adjustments. If you have any questions or concerns throughout the week, you can reach out at any time and I'll aim to respond within 24 hours." },
+    { q: "Can plans be adjusted?", a: "Absolutely. Life doesn't always go to plan, and your training shouldn't add unnecessary stress. If your schedule changes, you're feeling overly fatigued, or something unexpected comes up, your plan can be adjusted to suit your circumstances while keeping you on track towards your goal." },
+    { q: "What if I miss sessions?", a: "Missing a session occasionally is completely normal. Consistency over time is far more important than perfection. If you miss a run, we'll review the week as a whole and make any adjustments needed rather than trying to cram missed sessions into future days." },
+    { q: "What races do you coach for?", a: "I coach runners preparing for a wide range of goals, including Couch to 5K, 5K, 10K, Half Marathon, Marathon, and other running events. Whether your goal is to complete your first race or achieve a new personal best, your training plan will be built around your specific event and objectives." }
   ],
   /* Strava (optional) — leave blank to hide all Strava features.
      STRAVA_WORKER_URL is the address of the small Cloudflare Worker that
@@ -488,7 +553,7 @@ async function dbGetAll(){
   return new Promise((res,rej)=>{
     const tx = db.transaction(STORE,"readonly");
     const r = tx.objectStore(STORE).getAll();
-    r.onsuccess=()=>res(r.result.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)));
+    r.onsuccess=()=>res(r.result.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(migrateAthlete));
     r.onerror=()=>rej(r.error);
   });
 }
@@ -497,7 +562,7 @@ async function dbGet(id){
   return new Promise((res,rej)=>{
     const tx = db.transaction(STORE,"readonly");
     const r = tx.objectStore(STORE).get(id);
-    r.onsuccess=()=>res(r.result);
+    r.onsuccess=()=>res(r.result ? migrateAthlete(r.result) : r.result);
     r.onerror=()=>rej(r.error);
   });
 }
@@ -540,14 +605,58 @@ function newAthlete(overrides){
     createdAt: Date.now(),
     stage: 0,
     name: "", email: "", phone: "",
+    age: "", experience: "",
+    goalRace: "", goalRaceDate: "", goalTime: "",
+    trainingPhase: "", startDate: "", availability: "",
     inquiry: {},
     questionnaire: {},
     discoveryNotes: "",
-    plan: { sessions: [], paceZones: {} },
+    /* plan.weeks: [{ id, weekNumber, startDate, coachFocus, sessions:[{
+         id, day, type, distance, pace, description, warmup, main, cooldown,
+         coachNotes, completed, actual:{distance,time,rpe,notes}
+       }] }] */
+    plan: { paceZones: {}, weeks: [] },
+    currentWeekIndex: 0,
     checkins: [],
     reviews: [],
-    debrief: {}
+    debrief: {},
+    /* personalBests: { "5K": {current:"", previous:""}, "10K":..., "Half Marathon":..., "Marathon":... } */
+    personalBests: {},
+    raceChecklist: { finalLongRun:false, racePacePractised:false, taperStarted:false, raceStrategyReviewed:false },
+    raceNotes: { targetPace:"", nutritionPlan:"", pacingStrategy:"", raceDayReminders:"" },
+    /* messages: [{date, text}] — coach notes shown to the athlete, newest last */
+    messages: []
   }, overrides||{});
+}
+/* Fills in any fields missing on athletes created before this data model
+   existed, so older demo/local data doesn't break new UI. */
+function migrateAthlete(a){
+  const blank = newAthlete({});
+  for(const k of Object.keys(blank)){
+    if(a[k] === undefined) a[k] = blank[k];
+  }
+  if(!a.plan) a.plan = { paceZones:{}, weeks:[] };
+  if(!a.plan.weeks) a.plan.weeks = [];
+  if(!a.plan.paceZones) a.plan.paceZones = {};
+  // migrate old flat plan.sessions (pre weekly-plan redesign) into Week 1
+  if(Array.isArray(a.plan.sessions) && a.plan.sessions.length && !a.plan.weeks.length){
+    a.plan.weeks.push({
+      id: uid(), weekNumber: 1, startDate: new Date().toISOString().slice(0,10),
+      coachFocus: "",
+      sessions: a.plan.sessions.map(s=>({
+        id: uid(), day: s.day||"", type: s.type||"", distance:"", pace:"",
+        description: s.description||"", warmup:"", main:"", cooldown:"", coachNotes:"",
+        completed:false, actual:{distance:"",time:"",rpe:"",notes:""}
+      }))
+    });
+    delete a.plan.sessions;
+  }
+  if(!a.raceChecklist) a.raceChecklist = { finalLongRun:false, racePacePractised:false, taperStarted:false, raceStrategyReviewed:false };
+  if(!a.raceNotes) a.raceNotes = { targetPace:"", nutritionPlan:"", pacingStrategy:"", raceDayReminders:"" };
+  if(!a.personalBests) a.personalBests = {};
+  if(!a.messages) a.messages = [];
+  if(a.currentWeekIndex == null) a.currentWeekIndex = 0;
+  return a;
 }
 function parseHash(){
   const raw = location.hash.replace(/^#/,"") || "/";
@@ -608,6 +717,157 @@ function paceLabel(minPerKm){
 }
 
 /* ============================================================
+   PLAN / PROGRESS HELPERS
+   Stages used by "active" checks below: index 6 = Active Coaching,
+   7 = Race Week — i.e. currently mid training block.
+   ============================================================ */
+const ACTIVE_STAGES = [6,7];
+function isActiveAthlete(a){ return ACTIVE_STAGES.includes(a.stage); }
+function getWeeks(a){ return (a.plan && a.plan.weeks) || []; }
+function getCurrentWeek(a){
+  const weeks = getWeeks(a);
+  if(!weeks.length) return null;
+  const idx = Math.min(Math.max(a.currentWeekIndex||0,0), weeks.length-1);
+  return weeks[idx];
+}
+function weekProgress(week){
+  if(!week) return { completed:0, total:0, distanceCompleted:0, distanceTotal:0, longRunDone:false, pct:0 };
+  const sessions = week.sessions||[];
+  const total = sessions.length;
+  const completed = sessions.filter(s=>s.completed).length;
+  let distanceTotal = 0, distanceCompleted = 0;
+  let longRunDone = false;
+  sessions.forEach(s=>{
+    const planned = parseFloat(s.distance)||0;
+    distanceTotal += planned;
+    if(s.completed){
+      const actualDist = parseFloat(s.actual && s.actual.distance) || planned;
+      distanceCompleted += actualDist;
+      if(/long/i.test(s.type||"")) longRunDone = true;
+    }
+  });
+  return { completed, total, distanceCompleted, distanceTotal, longRunDone, pct: total ? Math.round((completed/total)*100) : 0 };
+}
+function daysUntil(dateStr){
+  if(!dateStr) return null;
+  const target = new Date(dateStr+"T00:00:00");
+  if(isNaN(target)) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Math.round((target-today)/86400000);
+}
+function fmtDate(dateStr){
+  if(!dateStr) return "—";
+  const d = new Date(dateStr+"T00:00:00");
+  if(isNaN(d)) return dateStr;
+  return d.toLocaleDateString(undefined,{ day:"numeric", month:"short", year:"numeric" });
+}
+/* Current streak = consecutive fully-completed weeks counting back from the
+   athlete's current week (not counting an in-progress current week). */
+function computeStreak(a){
+  const weeks = getWeeks(a);
+  const idx = Math.min(Math.max(a.currentWeekIndex||0,0), weeks.length-1);
+  let streak = 0;
+  for(let i=idx-1;i>=0;i--){
+    const p = weekProgress(weeks[i]);
+    if(p.total>0 && p.completed===p.total) streak++; else break;
+  }
+  return streak;
+}
+/* "This month" stats — uses each week's startDate to decide whether its
+   completed sessions count toward the current calendar month. */
+function computeMonthStats(a){
+  const now = new Date();
+  const weeks = getWeeks(a);
+  let distance = 0, sessions = 0;
+  weeks.forEach(w=>{
+    if(!w.startDate) return;
+    const d = new Date(w.startDate+"T00:00:00");
+    if(isNaN(d) || d.getMonth()!==now.getMonth() || d.getFullYear()!==now.getFullYear()) return;
+    (w.sessions||[]).forEach(s=>{
+      if(s.completed){
+        sessions++;
+        distance += parseFloat(s.actual && s.actual.distance) || parseFloat(s.distance) || 0;
+      }
+    });
+  });
+  return { distance: Math.round(distance*10)/10, sessions };
+}
+function computeAchievements(a){
+  const out = [];
+  const streak = computeStreak(a);
+  if(streak>=1) out.push(`${streak} Week Training Streak 🔥`);
+  const weeks = getWeeks(a);
+  let longestRun = 0;
+  weeks.forEach(w=>(w.sessions||[]).forEach(s=>{
+    if(s.completed){
+      const d = parseFloat(s.actual && s.actual.distance) || parseFloat(s.distance) || 0;
+      if(d>longestRun) longestRun = d;
+    }
+  }));
+  if(longestRun>0) out.push(`Longest Run Completed: ${longestRun}km 🏅`);
+  const month = computeMonthStats(a);
+  if(month.distance>0) out.push(`${month.distance}km This Month 🚀`);
+  const cw = getCurrentWeek(a);
+  const cwp = weekProgress(cw);
+  if(cw && cwp.total>0 && cwp.completed===cwp.total) out.push(`Week ${cw.weekNumber||""} Complete! 🎉`);
+  return out;
+}
+function computeNeedsAttention(athletes){
+  const now = Date.now();
+  return athletes.filter(a=>{
+    if(!isActiveAthlete(a)) return false;
+    const checkins = a.checkins||[];
+    if(!checkins.length) return true;
+    const last = checkins.reduce((max,c)=>{ const t=new Date(c.date).getTime(); return t>max?t:max; }, 0);
+    if(!last) return true;
+    return (now-last) > 7*86400000;
+  });
+}
+function computeUpcomingRaces(athletes, withinDays){
+  withinDays = withinDays||30;
+  return athletes.filter(a=>{
+    const d = daysUntil(a.goalRaceDate);
+    return d!=null && d>=0 && d<=withinDays;
+  }).sort((x,y)=>daysUntil(x.goalRaceDate)-daysUntil(y.goalRaceDate));
+}
+function computeWeeklyCompletionRate(athletes){
+  const active = athletes.filter(isActiveAthlete).filter(a=>getCurrentWeek(a));
+  if(!active.length) return null;
+  const total = active.reduce((sum,a)=>sum+weekProgress(getCurrentWeek(a)).pct,0);
+  return Math.round(total/active.length);
+}
+function computeReminders(athletes){
+  const now = Date.now();
+  const reminders = [];
+  athletes.forEach(a=>{
+    if(!isActiveAthlete(a)) return;
+    const checkins = a.checkins||[];
+    const lastCheckin = checkins.reduce((max,c)=>{ const t=new Date(c.date).getTime(); return t>max?t:max; }, 0);
+    if(!lastCheckin || (now-lastCheckin) > 7*86400000){
+      reminders.push({ type:"Weekly check-in", athlete:a, dueText: lastCheckin ? `last check-in ${Math.floor((now-lastCheckin)/86400000)}d ago` : "no check-in logged yet" });
+    }
+    const reviews = a.reviews||[];
+    const lastReview = reviews.length ? reviews.length : 0;
+    if(a.startDate){
+      const daysCoaching = Math.floor((now-new Date(a.startDate+"T00:00:00").getTime())/86400000);
+      if(daysCoaching>=27 && reviews.length===0){
+        reminders.push({ type:"Monthly catch-up", athlete:a, dueText: `coaching ${daysCoaching}d, no review logged yet` });
+      }
+    }
+  });
+  return reminders;
+}
+/* ------------------------------------------------------------
+   Content Library (shared coaching resources) — small enough to
+   keep in localStorage rather than adding an IndexedDB store.
+   ------------------------------------------------------------ */
+const RESOURCES_KEY = "rc_resources_v1";
+function getResources(){
+  try{ return JSON.parse(localStorage.getItem(RESOURCES_KEY)) || []; }catch(e){ return []; }
+}
+function saveResources(list){ localStorage.setItem(RESOURCES_KEY, JSON.stringify(list)); }
+
+/* ============================================================
    ROUTER
    ============================================================ */
 const root = document.getElementById("app");
@@ -621,8 +881,13 @@ async function render(){
   if(path === "/inquiry") return renderInquiry();
   if(path === "/questionnaire") return renderQuestionnaire(params.athlete||null);
   if(path === "/dashboard") return renderDashboardGate();
+  if(path === "/dashboard/resources") return renderResourcesGate();
   if(path.startsWith("/dashboard/athlete/")) return renderDashboardGate(path.split("/").pop(), params);
   if(path === "/settings") return renderSettingsGate();
+  if(path.startsWith("/athlete-view/")){
+    const parts = path.split("/").filter(Boolean); // ["athlete-view", id, tab?]
+    return renderAthleteViewGate(parts[1], parts[2]||"dashboard");
+  }
   root.innerHTML = `<div class="container" style="padding:60px 0"><h2>Not found</h2><a href="#/">Back home</a></div>`;
 }
 
@@ -1010,6 +1275,14 @@ function renderSettingsGate(){
   if(_unlocked) return renderSettings();
   renderPinScreen(()=>{ _unlocked = true; renderSettings(); });
 }
+function renderResourcesGate(){
+  if(_unlocked) return renderResources();
+  renderPinScreen(()=>{ _unlocked = true; renderResources(); });
+}
+function renderAthleteViewGate(athleteId, tab){
+  if(_unlocked) return renderAthleteView(athleteId, tab);
+  renderPinScreen(()=>{ _unlocked = true; renderAthleteView(athleteId, tab); });
+}
 
 function renderPinScreen(onSuccess){
   const creating = !hasPin();
@@ -1051,17 +1324,76 @@ async function renderDashboard(athleteId, params){
   }
   const athletes = await dbGetAll();
   const byStage = CONFIG.STAGES.map((_,i)=>athletes.filter(a=>a.stage===i));
+  const activeAthletes = athletes.filter(isActiveAthlete);
+  const needsAttention = computeNeedsAttention(athletes);
+  const upcomingRaces = computeUpcomingRaces(athletes, 30);
+  const completionRate = computeWeeklyCompletionRate(athletes);
+  const reminders = computeReminders(athletes);
 
   root.innerHTML = `
     <div class="dash-shell">
       <div class="dash-top">
         <span class="brand">${esc(CONFIG.BUSINESS_NAME)} — Dashboard${IS_DEMO?'<span class="badge-demo">DEMO</span>':''}</span>
         <div>
+          <a class="btn btn-ghost" href="#/dashboard/resources">Resources</a>
           <a class="btn btn-ghost" href="#/settings">Settings</a>
           <a class="btn btn-ghost" href="#/">View site</a>
         </div>
       </div>
       <div class="dash-body">
+        <div class="overview-cards">
+          <div class="ov-card">
+            <div class="ov-num">${athletes.length}</div>
+            <div class="ov-label">Total Athletes</div>
+            <div class="ov-sub">${activeAthletes.length} active</div>
+          </div>
+          <div class="ov-card ${needsAttention.length? 'ov-warn':''}">
+            <div class="ov-num">${needsAttention.length}</div>
+            <div class="ov-label">Needs Attention</div>
+            <div class="ov-sub">${needsAttention.length ? "missed check-ins" : "all caught up"}</div>
+          </div>
+          <div class="ov-card">
+            <div class="ov-num">${upcomingRaces.length}</div>
+            <div class="ov-label">Upcoming Races</div>
+            <div class="ov-sub">next 30 days</div>
+          </div>
+          <div class="ov-card">
+            <div class="ov-num">${completionRate==null?"—":completionRate+"%"}</div>
+            <div class="ov-label">Weekly Completion</div>
+            <div class="ov-sub">active athletes, this week</div>
+          </div>
+        </div>
+
+        ${reminders.length ? `
+        <div class="card" style="margin-bottom:20px;">
+          <h3 style="margin-bottom:10px;">Reminders</h3>
+          ${reminders.map(r=>`
+            <div class="reminder-row">
+              <span class="tag">${esc(r.type)}</span>
+              <a href="#/dashboard/athlete/${r.athlete.id}">${esc(r.athlete.name||"Unnamed")}</a>
+              <span class="muted">${esc(r.dueText)}</span>
+            </div>
+          `).join("")}
+        </div>` : ""}
+
+        ${activeAthletes.length ? `
+        <div class="card" style="margin-bottom:20px;">
+          <h3 style="margin-bottom:10px;">Weekly Training Review</h3>
+          <table class="simple">
+            <tr><th>Athlete</th><th>Week</th><th>Sessions</th><th>Distance</th></tr>
+            ${activeAthletes.map(a=>{
+              const w = getCurrentWeek(a);
+              const p = weekProgress(w);
+              return `<tr>
+                <td><a href="#/dashboard/athlete/${a.id}">${esc(a.name||"Unnamed")}</a></td>
+                <td>${w ? "Week "+(w.weekNumber||"") : "—"}</td>
+                <td>${p.total ? `${p.completed}/${p.total}` : "—"}</td>
+                <td>${p.total ? `${p.distanceCompleted}/${p.distanceTotal}km` : "—"}</td>
+              </tr>`;
+            }).join("")}
+          </table>
+        </div>` : ""}
+
         <div class="toolbar">
           <button class="btn btn-primary btn-sm" id="addAthleteBtn">+ Add athlete</button>
           <span class="muted">${athletes.length} athlete${athletes.length===1?"":"s"} total</span>
@@ -1145,6 +1477,8 @@ async function renderAthleteProfile(athlete, params){
     ["plan","Plan Builder"],
     ["checkins","Weekly Check-ins"],
     ["reviews","Monthly Reviews"],
+    ["raceprep","Race Prep"],
+    ["progress","Progress"],
     ["debrief","Race Debrief"],
     ["templates","Templates"]
   ];
@@ -1153,6 +1487,7 @@ async function renderAthleteProfile(athlete, params){
       <div class="dash-top">
         <a class="btn btn-ghost" href="#/dashboard">← All athletes</a>
         <div>
+          <a class="btn btn-ghost" href="#/dashboard/resources">Resources</a>
           <a class="btn btn-ghost" href="#/settings">Settings</a>
         </div>
       </div>
@@ -1161,6 +1496,7 @@ async function renderAthleteProfile(athlete, params){
           <div>
             <h2 style="margin-bottom:4px;">${esc(athlete.name||"Unnamed athlete")}</h2>
             <p class="muted" style="margin:0;">${esc(athlete.email||"")} ${athlete.phone?" · "+esc(athlete.phone):""}</p>
+            <a class="btn btn-secondary btn-sm" style="margin-top:10px;" href="#/athlete-view/${athlete.id}/dashboard">View as Athlete →</a>
           </div>
           <div>
             <label class="muted" style="font-size:.78rem;display:block;margin-bottom:4px;">Stage</label>
@@ -1202,14 +1538,35 @@ function renderTab(athlete){
   const el = document.getElementById("tabContent");
   const renderers = {
     overview: tabOverview, questionnaire: tabQuestionnaire, discovery: tabDiscovery,
-    plan: tabPlan, checkins: tabCheckins, reviews: tabReviews, debrief: tabDebrief, templates: tabTemplates
+    plan: tabPlan, checkins: tabCheckins, reviews: tabReviews,
+    raceprep: tabRacePrep, progress: tabProgress,
+    debrief: tabDebrief, templates: tabTemplates
   };
   el.innerHTML = renderers[_activeTab](athlete);
   wireTab(_activeTab, athlete);
 }
 
 function tabOverview(a){
+  const daysLeft = daysUntil(a.goalRaceDate);
   return `
+    <div class="card" style="margin-bottom:16px;">
+      <h3>Athlete overview</h3>
+      <div class="grid2">
+        <div class="field"><label>Name</label><input type="text" id="ovName" value="${esc(a.name)}"></div>
+        <div class="field"><label>Age (optional)</label><input type="text" id="ovAge" value="${esc(a.age)}"></div>
+        <div class="field"><label>Email</label><input type="email" id="ovEmail" value="${esc(a.email)}"></div>
+        <div class="field"><label>Phone</label><input type="tel" id="ovPhone" value="${esc(a.phone)}"></div>
+        <div class="field"><label>Running experience</label><input type="text" id="ovExperience" value="${esc(a.experience)}" placeholder="e.g. Beginner, 6 months"></div>
+        <div class="field"><label>Current training phase</label><input type="text" id="ovPhase" value="${esc(a.trainingPhase)}" placeholder="e.g. Building Consistency"></div>
+        <div class="field"><label>Goal race</label><input type="text" id="ovGoalRace" value="${esc(a.goalRace)}" placeholder="e.g. Complete first 5K"></div>
+        <div class="field"><label>Race date</label><input type="date" id="ovGoalRaceDate" value="${esc(a.goalRaceDate)}"></div>
+        <div class="field"><label>Goal time (optional)</label><input type="text" id="ovGoalTime" value="${esc(a.goalTime)}"></div>
+        <div class="field"><label>Coaching start date</label><input type="date" id="ovStartDate" value="${esc(a.startDate)}"></div>
+        <div class="field" style="grid-column:1/-1;"><label>Training availability</label><input type="text" id="ovAvailability" value="${esc(a.availability)}" placeholder="e.g. Tue/Thu evenings, Sat/Sun mornings"></div>
+      </div>
+      ${daysLeft!=null ? `<p class="muted">${daysLeft>=0 ? `${daysLeft} day${daysLeft===1?"":"s"} until race day` : "Race date has passed"}</p>` : ""}
+      <button class="btn btn-secondary btn-sm" id="ovSave">Save</button>
+    </div>
     <div class="grid2">
       <div class="card">
         <h3>Inquiry</h3>
@@ -1219,16 +1576,97 @@ function tabOverview(a){
           </table>` : `<p class="muted">No inquiry data (added manually).</p>`}
       </div>
       <div class="card">
-        <h3>Quick edit</h3>
-        <div class="field"><label>Name</label><input type="text" id="ovName" value="${esc(a.name)}"></div>
-        <div class="field"><label>Email</label><input type="email" id="ovEmail" value="${esc(a.email)}"></div>
-        <div class="field"><label>Phone</label><input type="tel" id="ovPhone" value="${esc(a.phone)}"></div>
-        <button class="btn btn-secondary btn-sm" id="ovSave">Save</button>
+        <h3>Message to athlete</h3>
+        <p class="muted">Shows on their "View as Athlete" dashboard, newest last. WhatsApp stays the main channel — this is just a personal touch on the app.</p>
+        ${(a.messages||[]).length ? `<div class="list-item"><div class="meta">${esc((a.messages[a.messages.length-1]||{}).date||"")}</div>${esc((a.messages[a.messages.length-1]||{}).text||"")}</div>` : `<p class="muted">No message yet.</p>`}
+        <div class="field"><textarea id="msgText" placeholder="Great work completing last week's long run..."></textarea></div>
+        <button class="btn btn-primary btn-sm" id="msgSave">Send message</button>
       </div>
     </div>
     <div class="card" style="margin-top:16px;">
       <h3>Strava</h3>
       <div id="stravaOverviewBox"><p class="muted">Checking connection…</p></div>
+    </div>
+  `;
+}
+function tabRacePrep(a){
+  const daysLeft = daysUntil(a.goalRaceDate);
+  const c = a.raceChecklist||{};
+  const n = a.raceNotes||{};
+  const checklistItems = [
+    ["finalLongRun","Final long run complete"],
+    ["racePacePractised","Race pace practised"],
+    ["taperStarted","Taper started"],
+    ["raceStrategyReviewed","Race strategy reviewed"]
+  ];
+  return `
+    <div class="card" style="margin-bottom:16px;">
+      <h3>Race countdown</h3>
+      ${a.goalRaceDate ? `<p style="font-size:1.6rem;font-weight:700;font-family:'Space Grotesk',sans-serif;">${daysLeft>=0?daysLeft:0} days</p><p class="muted">${esc(a.goalRace||"Goal race")} — ${fmtDate(a.goalRaceDate)}</p>` : `<p class="muted">Set a goal race date on the Overview tab to see a countdown.</p>`}
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>Race prep checklist</h3>
+      ${checklistItems.map(([key,label])=>`
+        <label class="checklist-row">
+          <input type="checkbox" data-check="${key}" ${c[key]?"checked":""}>
+          <span>${esc(label)}</span>
+        </label>
+      `).join("")}
+    </div>
+    <div class="card">
+      <h3>Race day notes</h3>
+      <div class="field"><label>Target pace</label><input type="text" id="rnPace" value="${esc(n.targetPace||"")}"></div>
+      <div class="field"><label>Nutrition plan</label><textarea id="rnNutrition">${esc(n.nutritionPlan||"")}</textarea></div>
+      <div class="field"><label>Pacing strategy</label><textarea id="rnPacing">${esc(n.pacingStrategy||"")}</textarea></div>
+      <div class="field"><label>Race day reminders</label><textarea id="rnReminders">${esc(n.raceDayReminders||"")}</textarea></div>
+      <button class="btn btn-secondary btn-sm" id="rnSave">Save race notes</button>
+    </div>
+  `;
+}
+function tabProgress(a){
+  const weeks = getWeeks(a);
+  const streak = computeStreak(a);
+  const month = computeMonthStats(a);
+  const pbKeys = ["5K","10K","Half Marathon","Marathon"];
+  const pbs = a.personalBests||{};
+  const maxDist = Math.max(1, ...weeks.map(w=>weekProgress(w).distanceTotal||0));
+  return `
+    <div class="overview-cards" style="margin-bottom:16px;">
+      <div class="ov-card"><div class="ov-num">${streak}</div><div class="ov-label">Week Streak</div></div>
+      <div class="ov-card"><div class="ov-num">${month.distance}km</div><div class="ov-label">This Month</div></div>
+      <div class="ov-card"><div class="ov-num">${month.sessions}</div><div class="ov-label">Sessions This Month</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>Weekly kilometres</h3>
+      ${weeks.length ? `
+        <div class="bar-chart">
+          ${weeks.map(w=>{
+            const p = weekProgress(w);
+            const hPlanned = maxDist ? Math.round((p.distanceTotal/maxDist)*100) : 0;
+            const hDone = maxDist ? Math.round((p.distanceCompleted/maxDist)*100) : 0;
+            return `<div class="bar-col" title="Week ${w.weekNumber}: ${p.distanceCompleted}/${p.distanceTotal}km">
+              <div class="bar-track"><div class="bar-planned" style="height:${hPlanned}%;"></div><div class="bar-done" style="height:${hDone}%;"></div></div>
+              <div class="bar-label">W${w.weekNumber}</div>
+            </div>`;
+          }).join("")}
+        </div>
+        <p class="muted" style="margin-top:10px;"><span style="color:var(--rust);">■</span> completed &nbsp; <span style="color:var(--line);">■</span> planned</p>
+      ` : `<p class="muted">Add weeks in Plan Builder to see progress here.</p>`}
+    </div>
+    <div class="card">
+      <h3>Personal bests</h3>
+      <div class="grid2">
+        ${pbKeys.map(k=>`
+          <div class="field">
+            <label>${esc(k)}</label>
+            <div style="display:flex;gap:8px;">
+              <input type="text" data-pb-prev="${k}" placeholder="previous" value="${esc((pbs[k]||{}).previous||"")}">
+              <input type="text" data-pb-cur="${k}" placeholder="current" value="${esc((pbs[k]||{}).current||"")}">
+            </div>
+          </div>
+        `).join("")}
+      </div>
+      <button class="btn btn-secondary btn-sm" id="pbSave">Save personal bests</button>
     </div>
   `;
 }
@@ -1264,9 +1702,9 @@ function tabDiscovery(a){
   `;
 }
 function tabPlan(a){
-  const sessions = a.plan?.sessions||[];
   const zones = a.plan?.paceZones||{};
   const zoneKeys = ["Easy","Marathon","Threshold","Interval","Recovery"];
+  const weeks = getWeeks(a);
   return `
     <div class="card" style="margin-bottom:16px;">
       <h3>Pace zones</h3>
@@ -1275,26 +1713,97 @@ function tabPlan(a){
       </div>
       <button class="btn btn-secondary btn-sm" id="saveZones">Save pace zones</button>
     </div>
-    <div class="card">
-      <h3>Weekly sessions</h3>
-      ${sessions.length ? sessions.map((s,i)=>`
-        <div class="list-item">
-          <div class="meta">${esc(s.day||"")}</div>
-          <strong>${esc(s.type||"")}</strong> — ${esc(s.description||"")}
-          <div class="row-actions"><button class="btn btn-ghost btn-sm removeSession" data-i="${i}">Remove</button></div>
-        </div>
-      `).join("") : `<p class="muted">No sessions added yet.</p>`}
-      <fieldset style="margin-top:14px;">
-        <legend>Add session</legend>
-        <div class="grid2">
-          <div class="field"><label>Day</label><input type="text" id="sesDay" placeholder="Tuesday"></div>
-          <div class="field"><label>Type</label><input type="text" id="sesType" placeholder="Intervals"></div>
-        </div>
-        <div class="field"><label>Description</label><textarea id="sesDesc" placeholder="6 x 800m @ threshold, 400m jog recovery"></textarea></div>
-        <button class="btn btn-primary btn-sm" id="addSession">Add session</button>
-      </fieldset>
+    <div class="toolbar">
+      <button class="btn btn-primary btn-sm" id="addWeekBtn">+ Add week</button>
+      <span class="muted">${weeks.length} week${weeks.length===1?"":"s"}</span>
     </div>
+    ${weeks.length ? weeks.map((w,wi)=>{
+      const p = weekProgress(w);
+      const isCurrent = wi === (a.currentWeekIndex||0);
+      return `
+      <div class="card week-card ${isCurrent?'week-current':''}" style="margin-bottom:16px;">
+        <div class="week-head">
+          <div>
+            <h3 style="margin-bottom:2px;">Week ${esc(w.weekNumber)} ${isCurrent?'<span class="tag">Current</span>':''}</h3>
+            <span class="muted">${p.completed}/${p.total} sessions · ${p.distanceCompleted}/${p.distanceTotal}km${w.startDate?` · starts ${fmtDate(w.startDate)}`:""}</span>
+          </div>
+          <div class="row-actions">
+            ${!isCurrent?`<button class="btn btn-ghost btn-sm setCurrentWeek" data-wi="${wi}">Set as current</button>`:""}
+            <button class="btn btn-ghost btn-sm removeWeek" data-wi="${wi}">Remove week</button>
+          </div>
+        </div>
+        <div class="field"><label>Coach focus for this week</label><textarea class="weekFocus" data-wi="${wi}" rows="2" placeholder="Focus on consistency rather than pace...">${esc(w.coachFocus||"")}</textarea></div>
+        <button class="btn btn-secondary btn-sm saveWeekFocus" data-wi="${wi}">Save focus</button>
+        <div style="margin-top:14px;">
+          ${(w.sessions||[]).length ? w.sessions.map((s,si)=>`
+            <div class="list-item">
+              <div class="meta">${esc(s.day||"")} ${s.completed?'<span class="tag">Completed</span>':''}</div>
+              <strong>${esc(s.type||"")}</strong> ${s.distance?`— ${esc(s.distance)}km`:""} ${s.pace?`@ ${esc(s.pace)}`:""}
+              ${s.description?`<div class="muted">${esc(s.description)}</div>`:""}
+              ${s.completed && s.actual && s.actual.distance ? `<div class="muted">Actual: ${esc(s.actual.distance)}km, RPE ${esc(s.actual.rpe||"—")}${s.actual.notes?` — "${esc(s.actual.notes)}"`:""}</div>` : ""}
+              <div class="row-actions">
+                <button class="btn btn-ghost btn-sm editSession" data-wi="${wi}" data-si="${si}">Edit</button>
+                <button class="btn btn-ghost btn-sm removeSession" data-wi="${wi}" data-si="${si}">Remove</button>
+              </div>
+            </div>
+          `).join("") : `<p class="muted">No sessions in this week yet.</p>`}
+          <button class="btn btn-secondary btn-sm addSessionBtn" data-wi="${wi}">+ Add session</button>
+        </div>
+      </div>
+      `;
+    }).join("") : `<p class="muted">No weeks yet — add one to start building the plan.</p>`}
   `;
+}
+function openSessionModal(a, wi, si){
+  const week = getWeeks(a)[wi];
+  const existing = (si!=null && week.sessions[si]) ? week.sessions[si] : null;
+  const s = existing || { day:"", type:"", distance:"", pace:"", description:"", warmup:"", main:"", cooldown:"", coachNotes:"" };
+  const wrap = document.createElement("div");
+  wrap.className = "modal-backdrop";
+  wrap.innerHTML = `
+    <div class="modal-box">
+      <h3>${existing?"Edit session":"Add session"}</h3>
+      <div class="grid2">
+        <div class="field"><label>Day</label><input type="text" id="smDay" value="${esc(s.day)}" placeholder="Tuesday"></div>
+        <div class="field"><label>Type</label><input type="text" id="smType" value="${esc(s.type)}" placeholder="Intervals / Long Run / Easy Run"></div>
+        <div class="field"><label>Distance (km)</label><input type="text" id="smDistance" value="${esc(s.distance)}"></div>
+        <div class="field"><label>Pace</label><input type="text" id="smPace" value="${esc(s.pace)}" placeholder="6:45-7:00/km"></div>
+      </div>
+      <div class="field"><label>Description</label><textarea id="smDesc">${esc(s.description)}</textarea></div>
+      <div class="field"><label>Warm-up</label><textarea id="smWarmup">${esc(s.warmup)}</textarea></div>
+      <div class="field"><label>Main session</label><textarea id="smMain">${esc(s.main)}</textarea></div>
+      <div class="field"><label>Cool-down</label><textarea id="smCooldown">${esc(s.cooldown)}</textarea></div>
+      <div class="field"><label>Coach notes</label><textarea id="smCoachNotes">${esc(s.coachNotes)}</textarea></div>
+      <div class="row-actions">
+        <button class="btn btn-primary" id="smSave">${existing?"Save changes":"Add session"}</button>
+        <button class="btn btn-secondary" id="smCancel">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector("#smCancel").addEventListener("click", ()=>wrap.remove());
+  wrap.querySelector("#smSave").addEventListener("click", async ()=>{
+    const type = document.getElementById("smType").value.trim();
+    if(!type){ toast("Session type required"); return; }
+    const data = {
+      id: existing ? existing.id : uid(),
+      day: document.getElementById("smDay").value.trim(),
+      type,
+      distance: document.getElementById("smDistance").value.trim(),
+      pace: document.getElementById("smPace").value.trim(),
+      description: document.getElementById("smDesc").value.trim(),
+      warmup: document.getElementById("smWarmup").value.trim(),
+      main: document.getElementById("smMain").value.trim(),
+      cooldown: document.getElementById("smCooldown").value.trim(),
+      coachNotes: document.getElementById("smCoachNotes").value.trim(),
+      completed: existing ? existing.completed : false,
+      actual: existing ? existing.actual : {distance:"",time:"",rpe:"",notes:""}
+    };
+    if(existing){ week.sessions[si] = data; } else { week.sessions = week.sessions||[]; week.sessions.push(data); }
+    await dbPut(a);
+    wrap.remove();
+    toast(existing?"Session updated":"Session added");
+    renderTab(a);
+  });
 }
 function tabCheckins(a){
   const items = a.checkins||[];
@@ -1449,11 +1958,56 @@ function wireTab(tab, a){
   if(tab==="overview"){
     document.getElementById("ovSave").addEventListener("click", async ()=>{
       a.name = document.getElementById("ovName").value.trim();
+      a.age = document.getElementById("ovAge").value.trim();
       a.email = document.getElementById("ovEmail").value.trim();
       a.phone = document.getElementById("ovPhone").value.trim();
+      a.experience = document.getElementById("ovExperience").value.trim();
+      a.trainingPhase = document.getElementById("ovPhase").value.trim();
+      a.goalRace = document.getElementById("ovGoalRace").value.trim();
+      a.goalRaceDate = document.getElementById("ovGoalRaceDate").value;
+      a.goalTime = document.getElementById("ovGoalTime").value.trim();
+      a.startDate = document.getElementById("ovStartDate").value;
+      a.availability = document.getElementById("ovAvailability").value.trim();
       await dbPut(a); toast("Saved"); renderAthleteProfile(a);
     });
+    document.getElementById("msgSave").addEventListener("click", async ()=>{
+      const text = document.getElementById("msgText").value.trim();
+      if(!text){ toast("Write a message first"); return; }
+      a.messages = a.messages||[];
+      a.messages.push({ date: new Date().toISOString().slice(0,10), text });
+      await dbPut(a); toast("Message saved"); renderTab(a);
+    });
     renderStravaOverviewBox(a);
+  }
+  if(tab==="raceprep"){
+    document.querySelectorAll("[data-check]").forEach(cb=>{
+      cb.addEventListener("change", async ()=>{
+        a.raceChecklist = a.raceChecklist||{};
+        a.raceChecklist[cb.dataset.check] = cb.checked;
+        await dbPut(a); toast("Saved");
+      });
+    });
+    document.getElementById("rnSave").addEventListener("click", async ()=>{
+      a.raceNotes = {
+        targetPace: document.getElementById("rnPace").value.trim(),
+        nutritionPlan: document.getElementById("rnNutrition").value.trim(),
+        pacingStrategy: document.getElementById("rnPacing").value.trim(),
+        raceDayReminders: document.getElementById("rnReminders").value.trim()
+      };
+      await dbPut(a); toast("Race notes saved");
+    });
+  }
+  if(tab==="progress"){
+    document.getElementById("pbSave").addEventListener("click", async ()=>{
+      const pbs = {};
+      document.querySelectorAll("[data-pb-cur]").forEach(inp=>{
+        const k = inp.dataset.pbCur;
+        const prevInp = document.querySelector(`[data-pb-prev="${k}"]`);
+        pbs[k] = { current: inp.value.trim(), previous: prevInp ? prevInp.value.trim() : "" };
+      });
+      a.personalBests = pbs;
+      await dbPut(a); toast("Personal bests saved");
+    });
   }
   if(tab==="discovery"){
     document.getElementById("saveDiscovery").addEventListener("click", async ()=>{
@@ -1465,22 +2019,50 @@ function wireTab(tab, a){
     document.getElementById("saveZones").addEventListener("click", async ()=>{
       const zones = {};
       document.querySelectorAll("[data-zone]").forEach(inp=>{ zones[inp.dataset.zone] = inp.value.trim(); });
-      a.plan = a.plan || {sessions:[],paceZones:{}};
+      a.plan = a.plan || {weeks:[],paceZones:{}};
       a.plan.paceZones = zones;
       await dbPut(a); toast("Pace zones saved");
     });
-    document.getElementById("addSession").addEventListener("click", async ()=>{
-      const day = document.getElementById("sesDay").value.trim();
-      const type = document.getElementById("sesType").value.trim();
-      const description = document.getElementById("sesDesc").value.trim();
-      if(!type){ toast("Session type required"); return; }
-      a.plan = a.plan || {sessions:[],paceZones:{}};
-      a.plan.sessions.push({day,type,description});
-      await dbPut(a); toast("Session added"); renderTab(a);
+    document.getElementById("addWeekBtn").addEventListener("click", async ()=>{
+      a.plan = a.plan || {weeks:[],paceZones:{}};
+      a.plan.weeks = a.plan.weeks||[];
+      const nextNum = a.plan.weeks.length ? Math.max(...a.plan.weeks.map(w=>w.weekNumber||0))+1 : 1;
+      a.plan.weeks.push({ id: uid(), weekNumber: nextNum, startDate: new Date().toISOString().slice(0,10), coachFocus:"", sessions:[] });
+      await dbPut(a); toast("Week added"); renderTab(a);
+    });
+    document.querySelectorAll(".setCurrentWeek").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        a.currentWeekIndex = parseInt(btn.dataset.wi,10);
+        await dbPut(a); toast("Current week updated"); renderTab(a);
+      });
+    });
+    document.querySelectorAll(".removeWeek").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        if(!confirm("Remove this week and its sessions?")) return;
+        const wi = parseInt(btn.dataset.wi,10);
+        a.plan.weeks.splice(wi,1);
+        if(a.currentWeekIndex >= a.plan.weeks.length) a.currentWeekIndex = Math.max(0,a.plan.weeks.length-1);
+        await dbPut(a); renderTab(a);
+      });
+    });
+    document.querySelectorAll(".saveWeekFocus").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const wi = parseInt(btn.dataset.wi,10);
+        const ta = document.querySelector(`.weekFocus[data-wi="${wi}"]`);
+        a.plan.weeks[wi].coachFocus = ta.value.trim();
+        await dbPut(a); toast("Focus saved");
+      });
+    });
+    document.querySelectorAll(".addSessionBtn").forEach(btn=>{
+      btn.addEventListener("click", ()=>openSessionModal(a, parseInt(btn.dataset.wi,10), null));
+    });
+    document.querySelectorAll(".editSession").forEach(btn=>{
+      btn.addEventListener("click", ()=>openSessionModal(a, parseInt(btn.dataset.wi,10), parseInt(btn.dataset.si,10)));
     });
     document.querySelectorAll(".removeSession").forEach(btn=>{
       btn.addEventListener("click", async ()=>{
-        a.plan.sessions.splice(parseInt(btn.dataset.i,10),1);
+        const wi = parseInt(btn.dataset.wi,10), si = parseInt(btn.dataset.si,10);
+        a.plan.weeks[wi].sessions.splice(si,1);
         await dbPut(a); renderTab(a);
       });
     });
@@ -1595,6 +2177,413 @@ function renderSettings(){
       toast("Import failed — invalid file");
     }
   });
+}
+
+/* ============================================================
+   CONTENT LIBRARY (shared resources — #/dashboard/resources)
+   ============================================================ */
+function renderResources(){
+  const resources = getResources();
+  root.innerHTML = `
+    <div class="dash-shell">
+      <div class="dash-top">
+        <a class="btn btn-ghost" href="#/dashboard">← Dashboard</a>
+        <span class="brand">Resources</span>
+      </div>
+      <div class="dash-body">
+        <div class="container" style="padding:0;max-width:720px;margin:0;">
+          <p class="muted">Create once, share with any athlete — warm-ups, strength sessions, pace guides, race prep, recovery tips.</p>
+          <button class="btn btn-primary btn-sm" id="addResourceBtn">+ Add resource</button>
+          <div style="margin-top:16px;">
+            ${resources.length ? resources.map((r,i)=>`
+              <div class="list-item">
+                <div class="meta">${esc(r.category||"General")}</div>
+                <strong>${esc(r.title)}</strong>
+                ${r.body?`<div class="muted" style="white-space:pre-wrap;">${esc(r.body)}</div>`:""}
+                ${r.link?`<div><a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(r.link)}</a></div>`:""}
+                <div class="row-actions">
+                  <button class="btn btn-ghost btn-sm copyBtn" data-text="${esc(r.body||"")}">Copy</button>
+                  <button class="btn btn-ghost btn-sm removeResource" data-i="${i}">Remove</button>
+                </div>
+              </div>
+            `).join("") : `<p class="muted">No resources yet — files/content need to be created by you, then added here as text or links.</p>`}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.querySelectorAll(".copyBtn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{ navigator.clipboard.writeText(btn.dataset.text).then(()=>toast("Copied")); });
+  });
+  document.getElementById("addResourceBtn").addEventListener("click", ()=>openResourceModal());
+  document.querySelectorAll(".removeResource").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const list = getResources();
+      list.splice(parseInt(btn.dataset.i,10),1);
+      saveResources(list);
+      renderResources();
+    });
+  });
+}
+function openResourceModal(){
+  const wrap = document.createElement("div");
+  wrap.className = "modal-backdrop";
+  wrap.innerHTML = `
+    <div class="modal-box">
+      <h3>Add resource</h3>
+      <div class="field"><label>Category</label>
+        <select id="rsCategory">
+          <option>Warm-up routine</option>
+          <option>Strength session</option>
+          <option>Pace guide</option>
+          <option>Race preparation</option>
+          <option>Recovery tips</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Title *</label><input type="text" id="rsTitle"></div>
+      <div class="field"><label>Content</label><textarea id="rsBody" rows="6"></textarea></div>
+      <div class="field"><label>Link (optional)</label><input type="text" id="rsLink" placeholder="https://..."></div>
+      <div class="row-actions">
+        <button class="btn btn-primary" id="rsSave">Save</button>
+        <button class="btn btn-secondary" id="rsCancel">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector("#rsCancel").addEventListener("click", ()=>wrap.remove());
+  wrap.querySelector("#rsSave").addEventListener("click", ()=>{
+    const title = document.getElementById("rsTitle").value.trim();
+    if(!title){ toast("Title required"); return; }
+    const list = getResources();
+    list.push({
+      id: uid(),
+      category: document.getElementById("rsCategory").value,
+      title,
+      body: document.getElementById("rsBody").value.trim(),
+      link: document.getElementById("rsLink").value.trim()
+    });
+    saveResources(list);
+    wrap.remove();
+    renderResources();
+  });
+}
+
+/* ============================================================
+   ATHLETE DASHBOARD (athlete-facing preview)
+   Note: this app stores all data in the coach's own browser
+   (IndexedDB), so there's no real athlete login/backend yet —
+   this view is a preview the coach opens to see (and demo) what
+   an athlete would see. Wiring up real per-athlete accounts would
+   need a small backend, same as Strava did.
+   ============================================================ */
+const AV_RENDERERS = { dashboard: avDashboard, training: avTraining, progress: avProgress, messages: avMessages, profile: avProfile };
+function renderAthleteTabContent(a, tab){
+  const content = document.getElementById("athleteTabContent");
+  if(!content) return;
+  content.innerHTML = AV_RENDERERS[tab](a);
+  wireAthleteView(tab, a);
+}
+async function renderAthleteView(athleteId, tab){
+  const athlete = await dbGet(athleteId);
+  if(!athlete){
+    root.innerHTML = `<div class="container" style="padding:60px 0"><h2>Athlete not found</h2><a href="#/dashboard">Back to dashboard</a></div>`;
+    return;
+  }
+  tab = tab || "dashboard";
+  root.innerHTML = `
+    <div class="dash-shell athlete-view">
+      <div class="dash-top">
+        <a class="btn btn-ghost" href="#/dashboard/athlete/${athlete.id}">← Coach view</a>
+        <span class="tag">Preview — what ${esc(firstName(athlete.name))} would see</span>
+      </div>
+      <div class="dash-body athlete-view-body">
+        <div id="athleteTabContent"></div>
+      </div>
+      <div class="bottom-nav">
+        ${["dashboard","training","progress","messages","profile"].map(t=>`
+          <a class="bottom-nav-item ${tab===t?'active':''}" href="#/athlete-view/${athlete.id}/${t}">${t.charAt(0).toUpperCase()+t.slice(1)}</a>
+        `).join("")}
+      </div>
+    </div>
+  `;
+  renderAthleteTabContent(athlete, tab);
+}
+
+function avDashboard(a){
+  const week = getCurrentWeek(a);
+  const progress = weekProgress(week);
+  const daysLeft = daysUntil(a.goalRaceDate);
+  const streak = computeStreak(a);
+  const month = computeMonthStats(a);
+  const achievements = computeAchievements(a);
+  const nextSession = week ? (week.sessions||[]).find(s=>!s.completed) : null;
+  const lastMsg = (a.messages||[])[a.messages.length-1];
+
+  let racePrepPct = null;
+  if(a.startDate && a.goalRaceDate){
+    const start = new Date(a.startDate+"T00:00:00").getTime();
+    const end = new Date(a.goalRaceDate+"T00:00:00").getTime();
+    const now = Date.now();
+    if(end>start) racePrepPct = Math.min(100,Math.max(0,Math.round(((now-start)/(end-start))*100)));
+  }
+
+  return `
+    <div class="card av-welcome">
+      <div class="av-greeting">Good day, ${esc(firstName(a.name))} 👋</div>
+      ${a.goalRace? `<div class="av-goal">Goal: ${esc(a.goalRace)}</div>`:""}
+      ${a.goalRaceDate? `<div class="muted">Race Day: ${fmtDate(a.goalRaceDate)}${daysLeft!=null?` · ${daysLeft>=0?daysLeft+" days remaining":"race day has passed"}`:""}</div>`:""}
+      ${racePrepPct!=null ? `
+        <div class="progress-bar-outer" style="margin-top:12px;"><div class="progress-bar-inner" style="width:${racePrepPct}%;"></div></div>
+        <div class="muted" style="font-size:.78rem;">Race Preparation: ${racePrepPct}%</div>
+      ` : ""}
+    </div>
+
+    <div class="card av-next-workout">
+      <h3 style="margin-bottom:4px;">Today's Session</h3>
+      ${nextSession ? `
+        <div class="av-session-title">${esc(nextSession.type)}</div>
+        <div class="muted">${nextSession.distance?esc(nextSession.distance)+"km":""}${nextSession.pace?" · "+esc(nextSession.pace):""}</div>
+        <button class="btn btn-primary btn-sm" style="margin-top:10px;" id="viewNextWorkoutBtn">View Workout</button>
+      ` : `<p class="muted">${week ? "All sessions complete for this week 🎉" : "No plan set up yet — check back once your coach has built your training block."}</p>`}
+    </div>
+
+    <div class="card">
+      <h3>This Week</h3>
+      ${week ? `
+        <div class="muted">Sessions Completed: ${progress.completed}/${progress.total}</div>
+        <div class="muted">Distance: ${progress.distanceCompleted}km / ${progress.distanceTotal}km</div>
+        <div class="muted">Long Run: ${progress.longRunDone? "Completed ✅" : "Not yet"}</div>
+        <div class="progress-bar-outer" style="margin-top:10px;"><div class="progress-bar-inner" style="width:${progress.pct}%;"></div></div>
+      ` : `<p class="muted">No sessions this week yet.</p>`}
+    </div>
+
+    ${week && (week.sessions||[]).length ? `
+    <div class="card">
+      <h3>Upcoming Schedule</h3>
+      ${week.sessions.map(s=>`<div class="list-item" style="margin-bottom:8px;"><div class="meta">${esc(s.day||"—")} ${s.completed?"✅":""}</div>${esc(s.type)}${s.distance?" — "+esc(s.distance)+"km":""}</div>`).join("")}
+    </div>` : ""}
+
+    ${lastMsg ? `
+    <div class="card">
+      <h3>Coach Message</h3>
+      <p style="margin:0;">${esc(lastMsg.text)}</p>
+      <div class="meta" style="margin-top:6px;">${esc(lastMsg.date)}</div>
+    </div>` : ""}
+
+    <div class="overview-cards">
+      <div class="ov-card"><div class="ov-num">${streak}</div><div class="ov-label">Training Streak</div></div>
+      <div class="ov-card"><div class="ov-num">${month.distance}km</div><div class="ov-label">This Month</div></div>
+      <div class="ov-card"><div class="ov-num">${month.sessions}</div><div class="ov-label">Sessions This Month</div></div>
+      <div class="ov-card"><div class="ov-num">${daysLeft!=null?daysLeft:"—"}</div><div class="ov-label">Race Countdown</div></div>
+    </div>
+
+    ${achievements.length ? `
+    <div class="card">
+      <h3>Recent Achievements</h3>
+      <div class="achievement-list">${achievements.map(x=>`<span class="achievement-chip">${esc(x)}</span>`).join("")}</div>
+    </div>` : ""}
+  `;
+}
+
+function avTraining(a){
+  const weeks = getWeeks(a);
+  const idx = Math.min(Math.max(a.currentWeekIndex||0,0), Math.max(weeks.length-1,0));
+  const week = weeks[idx];
+  const progress = weekProgress(week);
+  const celebrate = week && progress.total>0 && progress.completed===progress.total;
+
+  return `
+    ${weeks.length ? `
+    <div class="week-nav">
+      <button class="btn btn-ghost btn-sm" id="avPrevWeek" ${idx<=0?"disabled":""}>← Prev</button>
+      <select id="avWeekSelect">
+        ${weeks.map((w,i)=>`<option value="${i}" ${i===idx?"selected":""}>Week ${esc(w.weekNumber)}</option>`).join("")}
+      </select>
+      <button class="btn btn-ghost btn-sm" id="avNextWeek" ${idx>=weeks.length-1?"disabled":""}>Next →</button>
+    </div>` : ""}
+    ${!week ? `<p class="muted">No weeks in this plan yet — check back once your coach has built your training block.</p>` : `
+      ${celebrate ? `
+        <div class="card celebrate-card">
+          <h3 style="margin-bottom:6px;">🎉 Week Complete!</h3>
+          <p style="margin:0;">You completed:</p>
+          <p style="margin:0;">${progress.completed}/${progress.total} sessions · ${progress.distanceCompleted}km total distance${progress.longRunDone?" · long run achieved":""}</p>
+        </div>
+      ` : ""}
+      <div class="session-list">
+        ${(week.sessions||[]).map((s,si)=>`
+          <div class="session-row ${s.completed?'done':''}">
+            <div class="session-row-head" data-toggle="${si}">
+              <span class="session-check">${s.completed?"✅":"⭕"}</span>
+              <span class="session-day">${esc(s.day||"—")}</span>
+              <span class="session-type">${esc(s.type)}</span>
+              <span class="muted">${s.distance?esc(s.distance)+"km":""}</span>
+            </div>
+            <div class="session-detail" id="sd-${si}" style="display:none;">
+              ${s.warmup?`<p><strong>Warm-up:</strong> ${esc(s.warmup)}</p>`:""}
+              ${s.main?`<p><strong>Main session:</strong> ${esc(s.main)}</p>`:""}
+              ${s.cooldown?`<p><strong>Cool-down:</strong> ${esc(s.cooldown)}</p>`:""}
+              ${s.coachNotes?`<p><strong>Coach notes:</strong> ${esc(s.coachNotes)}</p>`:""}
+              ${!s.warmup && !s.main && !s.cooldown && !s.coachNotes && s.description ? `<p>${esc(s.description)}</p>`:""}
+              ${s.completed ? `<p class="muted">Actual: ${esc(s.actual&&s.actual.distance||"—")}km, ${esc(s.actual&&s.actual.time||"—")}, RPE ${esc(s.actual&&s.actual.rpe||"—")}${s.actual&&s.actual.notes?` — "${esc(s.actual.notes)}"`:""}</p>` : `<button class="btn btn-primary btn-sm markCompleteBtn" data-si="${si}">Mark Complete</button>`}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+      ${week.coachFocus ? `
+        <div class="card" style="margin-top:16px;">
+          <h3>Coach Focus For This Week</h3>
+          <p style="margin:0;">${esc(week.coachFocus)}</p>
+        </div>
+      ` : ""}
+    `}
+  `;
+}
+
+function openCompleteSessionModal(a, si){
+  const week = getCurrentWeek(a);
+  const s = week.sessions[si];
+  const wrap = document.createElement("div");
+  wrap.className = "modal-backdrop";
+  wrap.innerHTML = `
+    <div class="modal-box">
+      <h3>Mark "${esc(s.type)}" complete</h3>
+      <p class="muted">How did the session feel?</p>
+      <div class="field"><label>Actual distance (km)</label><input type="text" id="mcDistance" value="${esc(s.distance||"")}"></div>
+      <div class="field"><label>Actual time</label><input type="text" id="mcTime" placeholder="e.g. 42 min"></div>
+      <div class="field"><label>Effort (RPE 1–10)</label><input type="number" min="1" max="10" id="mcRpe"></div>
+      <div class="field"><label>Notes (optional)</label><textarea id="mcNotes" placeholder="Felt good. Slightly tired after work."></textarea></div>
+      <div class="row-actions">
+        <button class="btn btn-primary" id="mcSave">Save</button>
+        <button class="btn btn-secondary" id="mcCancel">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector("#mcCancel").addEventListener("click", ()=>wrap.remove());
+  wrap.querySelector("#mcSave").addEventListener("click", async ()=>{
+    s.completed = true;
+    s.actual = {
+      distance: document.getElementById("mcDistance").value.trim(),
+      time: document.getElementById("mcTime").value.trim(),
+      rpe: document.getElementById("mcRpe").value.trim(),
+      notes: document.getElementById("mcNotes").value.trim()
+    };
+    await dbPut(a);
+    wrap.remove();
+    toast("Session marked complete");
+    renderAthleteTabContent(a, "training");
+  });
+}
+
+function avProgress(a){
+  const weeks = getWeeks(a);
+  const streak = computeStreak(a);
+  const month = computeMonthStats(a);
+  const maxDist = Math.max(1, ...weeks.map(w=>weekProgress(w).distanceTotal||0));
+  const pbKeys = ["5K","10K","Half Marathon","Marathon"];
+  const pbs = a.personalBests||{};
+  const pbRows = pbKeys.filter(k=>pbs[k] && (pbs[k].current||pbs[k].previous));
+  return `
+    <div class="overview-cards">
+      <div class="ov-card"><div class="ov-num">${streak}</div><div class="ov-label">Week Streak</div></div>
+      <div class="ov-card"><div class="ov-num">${month.distance}km</div><div class="ov-label">This Month</div></div>
+      <div class="ov-card"><div class="ov-num">${month.sessions}</div><div class="ov-label">Sessions This Month</div></div>
+    </div>
+    <div class="card">
+      <h3>Training Progress</h3>
+      ${weeks.length ? `
+        <div class="bar-chart">
+          ${weeks.map(w=>{
+            const p = weekProgress(w);
+            const hPlanned = maxDist ? Math.round((p.distanceTotal/maxDist)*100) : 0;
+            const hDone = maxDist ? Math.round((p.distanceCompleted/maxDist)*100) : 0;
+            return `<div class="bar-col" title="Week ${w.weekNumber}: ${p.distanceCompleted}/${p.distanceTotal}km">
+              <div class="bar-track"><div class="bar-planned" style="height:${hPlanned}%;"></div><div class="bar-done" style="height:${hDone}%;"></div></div>
+              <div class="bar-label">W${esc(w.weekNumber)}</div>
+            </div>`;
+          }).join("")}
+        </div>
+        <p class="muted" style="margin-top:10px;font-size:.78rem;">■ completed &nbsp; □ planned</p>
+      ` : `<p class="muted">No training weeks yet.</p>`}
+    </div>
+    <div class="card">
+      <h3>Personal Bests</h3>
+      <table class="simple">
+        ${pbRows.length ? pbRows.map(k=>`<tr><th>${esc(k)}</th><td>${pbs[k].previous?esc(pbs[k].previous)+" → ":""}${esc(pbs[k].current||"—")}</td></tr>`).join("") : `<tr><td class="muted">No personal bests logged yet.</td></tr>`}
+      </table>
+    </div>
+  `;
+}
+
+function avMessages(a){
+  const wa = waLink(CONFIG.WHATSAPP_NUMBER, `Hi ${CONFIG.COACH_FIRST}, quick question about my training...`);
+  const msgs = (a.messages||[]).slice().reverse();
+  return `
+    <div class="card" style="margin-bottom:16px;">
+      <h3>Message your coach</h3>
+      <p class="muted">Messaging happens over WhatsApp for now.</p>
+      ${wa ? `<a class="btn btn-moss btn-sm" href="${esc(wa)}" target="_blank" rel="noopener">Open WhatsApp</a>` : `<p class="muted">No WhatsApp number configured.</p>`}
+    </div>
+    <div class="card">
+      <h3>Notes from your coach</h3>
+      ${msgs.length ? msgs.map(m=>`<div class="list-item"><div class="meta">${esc(m.date)}</div>${esc(m.text)}</div>`).join("") : `<p class="muted">No messages yet.</p>`}
+    </div>
+  `;
+}
+
+function avProfile(a){
+  return `
+    <div class="card">
+      <h3>Profile</h3>
+      <table class="simple">
+        <tr><th>Name</th><td>${esc(a.name||"—")}</td></tr>
+        ${a.age?`<tr><th>Age</th><td>${esc(a.age)}</td></tr>`:""}
+        <tr><th>Running experience</th><td>${esc(a.experience||"—")}</td></tr>
+        <tr><th>Goal race</th><td>${esc(a.goalRace||"—")}</td></tr>
+        <tr><th>Race date</th><td>${fmtDate(a.goalRaceDate)}</td></tr>
+        <tr><th>Goal time</th><td>${esc(a.goalTime||"—")}</td></tr>
+        <tr><th>Current phase</th><td>${esc(a.trainingPhase||"—")}</td></tr>
+        <tr><th>Coaching since</th><td>${fmtDate(a.startDate)}</td></tr>
+        <tr><th>Training availability</th><td>${esc(a.availability||"—")}</td></tr>
+      </table>
+    </div>
+  `;
+}
+
+function wireAthleteView(tab, a){
+  if(tab==="dashboard"){
+    const btn = document.getElementById("viewNextWorkoutBtn");
+    if(btn) btn.addEventListener("click", ()=>{ location.hash = `#/athlete-view/${a.id}/training`; });
+  }
+  if(tab==="training"){
+    document.querySelectorAll("[data-toggle]").forEach(head=>{
+      head.addEventListener("click", ()=>{
+        const si = head.dataset.toggle;
+        const det = document.getElementById("sd-"+si);
+        if(det) det.style.display = det.style.display==="none" ? "block" : "none";
+      });
+    });
+    document.querySelectorAll(".markCompleteBtn").forEach(btn=>{
+      btn.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        openCompleteSessionModal(a, parseInt(btn.dataset.si,10));
+      });
+    });
+    const prevBtn = document.getElementById("avPrevWeek");
+    const nextBtn = document.getElementById("avNextWeek");
+    const sel = document.getElementById("avWeekSelect");
+    if(prevBtn) prevBtn.addEventListener("click", ()=>{
+      a.currentWeekIndex = Math.max(0,(a.currentWeekIndex||0)-1);
+      renderAthleteTabContent(a, "training");
+    });
+    if(nextBtn) nextBtn.addEventListener("click", ()=>{
+      a.currentWeekIndex = Math.min(getWeeks(a).length-1,(a.currentWeekIndex||0)+1);
+      renderAthleteTabContent(a, "training");
+    });
+    if(sel) sel.addEventListener("change", ()=>{
+      a.currentWeekIndex = parseInt(sel.value,10);
+      renderAthleteTabContent(a, "training");
+    });
+  }
 }
 </script>
 </body>
