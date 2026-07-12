@@ -21,6 +21,19 @@
     --line: rgba(0,0,0,0.10);
     --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06);
   }
+  /* dark theme — auto-applied by time of day / system preference,
+     or forced via the theme toggle (see head script) */
+  [data-theme="dark"]{
+    --ink:   #F3F4F6;
+    --paper: #0E1114;
+    --card:  #171B20;
+    --rust:  #FF6E62;
+    --moss:  #2FD1DE;
+    --dusk:  #6FB3E8;
+    --line: rgba(255,255,255,0.13);
+    --shadow: 0 1px 2px rgba(0,0,0,0.45), 0 4px 20px rgba(0,0,0,0.5);
+  }
+  [data-theme="dark"] body{background:var(--paper);}
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
@@ -40,13 +53,13 @@
     *{animation-duration:0.001ms !important;animation-iteration-count:1 !important;transition-duration:0.001ms !important;}
   }
   p{margin:0 0 1em;}
-  .muted{color:rgba(21,24,28,0.6);font-size:.92rem;}
+  .muted{color:color-mix(in srgb, var(--ink) 60%, transparent);font-size:.92rem;}
   .container{max-width:1080px;margin:0 auto;padding:0 24px;}
   .narrow{max-width:640px;}
   /* nav */
   header.site{
     position:sticky;top:0;z-index:20;
-    background:rgba(255,255,255,0.92);
+    background:color-mix(in srgb, var(--paper) 92%, transparent);
     backdrop-filter:blur(6px);
     border-bottom:1px solid var(--line);
   }
@@ -54,6 +67,8 @@
   header.site .brand{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.15rem;color:var(--ink);text-decoration:none;}
   header.site nav a{margin-left:18px;text-decoration:none;color:var(--ink);font-size:.92rem;font-weight:600;}
   header.site nav a.cta{background:var(--rust);color:#fff;padding:8px 16px;border-radius:8px;}
+  header.site nav .theme-toggle-btn{margin-left:18px;}
+  .dash-top .theme-toggle-btn{padding:8px 12px;}
   /* buttons */
   .btn{
     display:inline-flex;align-items:center;justify-content:center;gap:8px;
@@ -64,12 +79,18 @@
   .btn-primary{background:var(--rust);color:#fff;box-shadow:0 6px 16px rgba(255,90,78,0.25);}
   .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(255,90,78,0.32);}
   .btn-secondary{background:transparent;color:var(--ink);border-color:var(--line);}
-  .btn-secondary:hover{background:rgba(21,24,28,0.05);transform:translateY(-2px);}
+  .btn-secondary:hover{background:color-mix(in srgb, var(--ink) 5%, transparent);transform:translateY(-2px);}
   .btn-moss{background:var(--moss);color:#fff;}
   .btn-ghost{background:transparent;color:var(--dusk);padding:6px 10px;}
   .btn-danger{background:transparent;color:#a3402a;border-color:#a3402a;}
   .btn-sm{padding:6px 12px;font-size:.82rem;}
   .btn-block{width:100%;}
+  .theme-toggle-btn{
+    background:none;border:1px solid var(--line);border-radius:8px;padding:6px 12px;
+    font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink);
+    white-space:nowrap;
+  }
+  .theme-toggle-btn:hover{background:color-mix(in srgb, var(--ink) 6%, transparent);}
   /* cards */
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow);}
 
@@ -80,7 +101,7 @@
   .section{padding:72px 0;}
   .section-head{max-width:640px;margin:0 auto 40px;text-align:center;}
   .section-head h2{font-size:clamp(1.5rem,3.4vw,2rem);}
-  .section-head p{color:rgba(21,24,28,0.6);margin:0;}
+  .section-head p{color:color-mix(in srgb, var(--ink) 60%, transparent);margin:0;}
   .eyebrow-label{
     display:inline-block;color:var(--rust);font-weight:700;letter-spacing:.08em;
     text-transform:uppercase;font-size:.72rem;margin-bottom:10px;
@@ -138,10 +159,10 @@
   .about-photo img{width:100%;height:100%;object-fit:cover;display:block;}
   .about-photo .photo-placeholder{
     position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:8px;text-align:center;padding:20px;color:rgba(21,24,28,0.4);font-size:.82rem;font-weight:500;
+    gap:8px;text-align:center;padding:20px;color:color-mix(in srgb, var(--ink) 40%, transparent);font-size:.82rem;font-weight:500;
   }
   .about-photo .photo-placeholder .icon{font-size:1.8rem;opacity:.6;}
-  .about-text p{font-size:1.05rem;color:rgba(21,24,28,0.78);}
+  .about-text p{font-size:1.05rem;color:color-mix(in srgb, var(--ink) 78%, transparent);}
 
   /* who I help — 3 cards */
   .who-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;}
@@ -149,7 +170,7 @@
   .who-card h3{font-size:1.1rem;margin-bottom:14px;}
   .who-card ul{list-style:none;margin:0;padding:0;}
   .who-card li{
-    font-size:.92rem;color:rgba(21,24,28,0.72);padding:6px 0 6px 20px;position:relative;
+    font-size:.92rem;color:color-mix(in srgb, var(--ink) 72%, transparent);padding:6px 0 6px 20px;position:relative;
   }
   .who-card li::before{content:"";position:absolute;left:0;top:14px;width:8px;height:2px;background:var(--rust);}
 
@@ -158,7 +179,7 @@
   .step-item{display:flex;gap:18px;padding:20px 0;border-top:1px solid var(--line);}
   .step-item:last-child{border-bottom:1px solid var(--line);}
   .step-num{
-    flex:0 0 40px;height:40px;border-radius:50%;background:var(--ink);color:#fff;
+    flex:0 0 40px;height:40px;border-radius:50%;background:var(--ink);color:var(--paper);
     display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Space Grotesk',sans-serif;
   }
   .step-text{padding-top:6px;font-weight:600;font-size:1rem;}
@@ -178,14 +199,14 @@
     display:inline-block;background:rgba(255,90,78,0.1);color:var(--rust);font-size:.68rem;font-weight:700;
     letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:20px;margin-bottom:12px;
   }
-  .testimonial-card p.quote{font-size:.98rem;color:rgba(21,24,28,0.8);font-style:italic;margin-bottom:12px;}
+  .testimonial-card p.quote{font-size:.98rem;color:color-mix(in srgb, var(--ink) 80%, transparent);font-style:italic;margin-bottom:12px;}
   .testimonial-card .name{font-weight:700;font-size:.88rem;}
 
   /* pricing placeholder */
   .pricing-box{
     text-align:center;border:1px dashed var(--line);border-radius:16px;padding:44px 24px;max-width:520px;margin:0 auto;
   }
-  .pricing-box p{color:rgba(21,24,28,0.65);}
+  .pricing-box p{color:color-mix(in srgb, var(--ink) 65%, transparent);}
 
   /* FAQ */
   .faq-list{max-width:680px;margin:0 auto;}
@@ -199,26 +220,26 @@
   .faq-item.open .faq-q .icon{transform:rotate(45deg);}
   .faq-a{max-height:0;overflow:hidden;transition:max-height .25s ease;}
   .faq-item.open .faq-a{max-height:240px;}
-  .faq-a p{padding-bottom:18px;color:rgba(21,24,28,0.68);font-size:.94rem;margin:0;}
+  .faq-a p{padding-bottom:18px;color:color-mix(in srgb, var(--ink) 68%, transparent);font-size:.94rem;margin:0;}
 
   /* final CTA */
-  .final-cta{background:var(--ink);color:#fff;text-align:center;padding:76px 0;}
-  .final-cta h2{color:#fff;font-size:clamp(1.6rem,4vw,2.4rem);}
-  .final-cta p{color:rgba(255,255,255,0.7);max-width:480px;margin:0 auto 28px;}
+  .final-cta{background:var(--ink);color:var(--paper);text-align:center;padding:76px 0;}
+  .final-cta h2{color:var(--paper);font-size:clamp(1.6rem,4vw,2.4rem);}
+  .final-cta p{color:color-mix(in srgb, var(--paper) 70%, transparent);max-width:480px;margin:0 auto 28px;}
 
   footer.site{border-top:1px solid var(--line);padding:36px 0;}
   footer.site .container{display:flex;flex-direction:column;gap:16px;}
   footer.site .contact-row{display:flex;gap:20px;flex-wrap:wrap;align-items:center;}
   footer.site .contact-row a{font-weight:600;font-size:.9rem;}
-  footer.site .copyright{font-size:.82rem;color:rgba(21,24,28,0.5);}
+  footer.site .copyright{font-size:.82rem;color:color-mix(in srgb, var(--ink) 50%, transparent);}
   /* forms */
   .form-page{padding:40px 0 80px;}
   .field{margin-bottom:18px;}
   .field label{display:block;font-weight:600;font-size:.88rem;margin-bottom:6px;}
-  .field .hint{font-size:.78rem;color:rgba(21,24,28,0.55);margin-top:4px;}
+  .field .hint{font-size:.78rem;color:color-mix(in srgb, var(--ink) 55%, transparent);margin-top:4px;}
   input[type=text],input[type=email],input[type=tel],input[type=date],input[type=number],input[type=password],select,textarea{
     width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
-    font-size:.95rem;font-family:inherit;background:#fff;color:var(--ink);
+    font-size:.95rem;font-family:inherit;background:var(--paper);color:var(--ink);
   }
   textarea{min-height:90px;resize:vertical;}
   input:focus,select:focus,textarea:focus{outline:2px solid var(--dusk);outline-offset:1px;}
@@ -232,14 +253,14 @@
   .dash-top .brand{font-family:'Space Grotesk',sans-serif;font-weight:700;}
   .dash-body{padding:24px;}
   .pipeline{display:flex;gap:14px;overflow-x:auto;padding-bottom:20px;}
-  .stage-col{flex:0 0 250px;background:rgba(21,24,28,0.03);border:1px solid var(--line);border-radius:12px;padding:12px;}
-  .stage-col h4{font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;color:rgba(21,24,28,0.65);display:flex;justify-content:space-between;margin-bottom:10px;}
+  .stage-col{flex:0 0 250px;background:color-mix(in srgb, var(--ink) 3%, transparent);border:1px solid var(--line);border-radius:12px;padding:12px;}
+  .stage-col h4{font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;color:color-mix(in srgb, var(--ink) 65%, transparent);display:flex;justify-content:space-between;margin-bottom:10px;}
   .stage-col h4 .count{background:var(--ink);color:var(--paper);border-radius:20px;padding:1px 8px;font-size:.72rem;}
   .athlete-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;cursor:pointer;box-shadow:var(--shadow);}
   .athlete-card:hover{border-color:var(--rust);}
   .athlete-card .name{font-weight:700;font-size:.92rem;}
-  .athlete-card .sub{font-size:.76rem;color:rgba(21,24,28,0.55);}
-  .empty-col{font-size:.78rem;color:rgba(21,24,28,0.4);padding:8px 4px;}
+  .athlete-card .sub{font-size:.76rem;color:color-mix(in srgb, var(--ink) 55%, transparent);}
+  .empty-col{font-size:.78rem;color:color-mix(in srgb, var(--ink) 40%, transparent);padding:8px 4px;}
   .pin-gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
   .pin-box{max-width:340px;width:100%;text-align:center;}
   .pin-dots{display:flex;gap:10px;justify-content:center;margin:18px 0;}
@@ -250,16 +271,16 @@
   /* profile */
   .profile-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px;}
   .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:20px;}
-  .tab-btn{background:none;border:none;padding:10px 14px;font-size:.88rem;font-weight:600;color:rgba(21,24,28,0.55);cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;}
+  .tab-btn{background:none;border:none;padding:10px 14px;font-size:.88rem;font-weight:600;color:color-mix(in srgb, var(--ink) 55%, transparent);cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;}
   .tab-btn.active{color:var(--ink);border-color:var(--rust);}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
   @media(max-width:720px){.grid2{grid-template-columns:1fr;}}
   table.simple{width:100%;border-collapse:collapse;font-size:.88rem;}
   table.simple th,table.simple td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);}
-  .template-box{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;white-space:pre-wrap;font-size:.88rem;}
+  .template-box{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;white-space:pre-wrap;font-size:.88rem;}
   .template-actions{display:flex;gap:8px;margin-top:8px;}
-  .list-item{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fff;}
-  .list-item .meta{font-size:.75rem;color:rgba(21,24,28,0.5);margin-bottom:4px;}
+  .list-item{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--paper);}
+  .list-item .meta{font-size:.75rem;color:color-mix(in srgb, var(--ink) 50%, transparent);margin-bottom:4px;}
   .row-actions{display:flex;gap:8px;margin-top:16px;}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:8px;font-size:.85rem;z-index:100;box-shadow:var(--shadow);}
   .link-btn{background:none;border:none;color:var(--dusk);font-weight:600;cursor:pointer;font-size:.85rem;padding:0;font-family:inherit;}
@@ -273,8 +294,8 @@
   .ov-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;}
   .ov-card.ov-warn{border-color:var(--rust);background:rgba(255,90,78,0.06);}
   .ov-num{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.6rem;line-height:1.1;}
-  .ov-label{font-size:.78rem;color:rgba(21,24,28,0.6);margin-top:4px;}
-  .ov-sub{font-size:.72rem;color:rgba(21,24,28,0.45);margin-top:2px;}
+  .ov-label{font-size:.78rem;color:color-mix(in srgb, var(--ink) 60%, transparent);margin-top:4px;}
+  .ov-sub{font-size:.72rem;color:color-mix(in srgb, var(--ink) 45%, transparent);margin-top:2px;}
 
   .reminder-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line);font-size:.88rem;}
   .reminder-row:last-child{border-bottom:none;}
@@ -290,13 +311,13 @@
   /* simple bar chart (weekly km) */
   .bar-chart{display:flex;align-items:flex-end;gap:10px;height:140px;overflow-x:auto;padding-top:8px;}
   .bar-col{display:flex;flex-direction:column;align-items:center;gap:6px;flex:0 0 34px;height:100%;justify-content:flex-end;}
-  .bar-track{position:relative;width:20px;height:110px;background:rgba(21,24,28,0.05);border-radius:4px;display:flex;align-items:flex-end;overflow:hidden;}
+  .bar-track{position:relative;width:20px;height:110px;background:color-mix(in srgb, var(--ink) 8%, transparent);border-radius:4px;display:flex;align-items:flex-end;overflow:hidden;}
   .bar-planned{position:absolute;bottom:0;left:0;width:100%;background:var(--line);border-radius:4px;}
   .bar-done{position:absolute;bottom:0;left:0;width:100%;background:var(--rust);border-radius:4px;}
-  .bar-label{font-size:.68rem;color:rgba(21,24,28,0.5);}
+  .bar-label{font-size:.68rem;color:color-mix(in srgb, var(--ink) 50%, transparent);}
 
   /* progress bars (athlete dashboard) */
-  .progress-bar-outer{width:100%;height:8px;border-radius:6px;background:rgba(21,24,28,0.08);overflow:hidden;}
+  .progress-bar-outer{width:100%;height:8px;border-radius:6px;background:color-mix(in srgb, var(--ink) 10%, transparent);overflow:hidden;}
   .progress-bar-inner{height:100%;background:var(--rust);border-radius:6px;transition:width .3s ease;}
 
   /* athlete-facing dashboard */
@@ -311,11 +332,11 @@
   .week-nav select{width:auto;}
 
   .session-list{display:flex;flex-direction:column;gap:8px;}
-  .session-row{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden;}
+  .session-row{border:1px solid var(--line);border-radius:12px;background:var(--paper);overflow:hidden;}
   .session-row.done{border-color:rgba(23,182,196,0.4);}
   .session-row-head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;flex-wrap:wrap;}
   .session-check{font-size:1rem;}
-  .session-day{font-size:.78rem;color:rgba(21,24,28,0.5);flex:0 0 auto;min-width:70px;}
+  .session-day{font-size:.78rem;color:color-mix(in srgb, var(--ink) 50%, transparent);flex:0 0 auto;min-width:70px;}
   .session-type{font-weight:700;flex:1 1 auto;}
   .session-detail{padding:0 14px 14px;font-size:.9rem;}
   .session-detail p{margin:0 0 8px;}
@@ -324,11 +345,11 @@
   .achievement-chip{background:rgba(255,90,78,0.1);color:var(--rust);border-radius:20px;padding:6px 12px;font-size:.8rem;font-weight:700;}
 
   .bottom-nav{
-    position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);
+    position:fixed;bottom:0;left:0;right:0;background:var(--paper);border-top:1px solid var(--line);
     display:flex;justify-content:space-around;padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:10;
   }
   .bottom-nav-item{
-    text-decoration:none;color:rgba(21,24,28,0.5);font-size:.72rem;font-weight:600;text-align:center;
+    text-decoration:none;color:color-mix(in srgb, var(--ink) 50%, transparent);font-size:.72rem;font-weight:600;text-align:center;
     padding:6px 8px;border-radius:8px;
   }
   .bottom-nav-item.active{color:var(--rust);background:rgba(255,90,78,0.08);}
@@ -382,6 +403,41 @@
     .overview-cards{grid-template-columns:repeat(2,1fr);}
   }
 </style>
+<script>
+/* ============================================================
+   THEME — auto light/dark based on system preference + time of
+   day (dark 7pm–7am), with a manual light/dark/auto override
+   saved per-device. Runs synchronously in <head> so the correct
+   theme is set before first paint (no flash of wrong theme).
+   ============================================================ */
+function getEffectiveTheme(){
+  try{
+    var pref = localStorage.getItem("themePref") || "auto";
+    if(pref==="light" || pref==="dark") return pref;
+    var sysDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var h = new Date().getHours();
+    var timeDark = (h>=19 || h<7);
+    return (sysDark || timeDark) ? "dark" : "light";
+  }catch(e){ return "light"; }
+}
+function applyTheme(){
+  document.documentElement.setAttribute("data-theme", getEffectiveTheme());
+}
+function cycleTheme(){
+  var cur = localStorage.getItem("themePref") || "auto";
+  var next = cur==="auto" ? "light" : (cur==="light" ? "dark" : "auto");
+  localStorage.setItem("themePref", next);
+  location.reload();
+}
+function themeToggleLabel(){
+  var pref = localStorage.getItem("themePref") || "auto";
+  return pref==="dark" ? "🌙 Dark" : pref==="light" ? "☀️ Light" : "🌓 Auto";
+}
+applyTheme();
+if(window.matchMedia){
+  try{ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme); }catch(e){}
+}
+</script>
 </head>
 <body>
 <div id="app"></div>
@@ -964,6 +1020,7 @@ function siteHeader(){
       <nav>
         <a href="#/login">Athlete login</a>
         <a href="#/dashboard">Coach login</a>
+        <button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme" title="Switches between light, dark and auto (follows system + time of day)">${themeToggleLabel()}</button>
         <a class="cta" href="#/inquiry">Get started</a>
       </nav>
     </div>
@@ -1427,6 +1484,7 @@ async function renderDashboard(athleteId, params){
       <div class="dash-top">
         <span class="brand">${esc(CONFIG.BUSINESS_NAME)} — Dashboard${IS_DEMO?'<span class="badge-demo">DEMO</span>':''}</span>
         <div>
+          <button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button>
           <a class="btn btn-ghost" href="#/dashboard/resources">Resources</a>
           <a class="btn btn-ghost" href="#/settings">Settings</a>
           <a class="btn btn-ghost" href="#/">View site</a>
@@ -1581,6 +1639,7 @@ async function renderAthleteProfile(athlete, params){
       <div class="dash-top">
         <a class="btn btn-ghost" href="#/dashboard">← All athletes</a>
         <div>
+          <button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button>
           <a class="btn btn-ghost" href="#/dashboard/resources">Resources</a>
           <a class="btn btn-ghost" href="#/settings">Settings</a>
           <button class="btn btn-ghost" id="coachLogoutLink">Log out</button>
@@ -2262,6 +2321,7 @@ function renderSettings(){
       <div class="dash-top">
         <a class="btn btn-ghost" href="#/dashboard">← Dashboard</a>
         <span class="brand">Settings</span>
+        <button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button>
         <button class="btn btn-ghost" id="coachLogoutLink">Log out</button>
       </div>
       <div class="dash-body">
@@ -2351,6 +2411,7 @@ async function renderResources(){
       <div class="dash-top">
         <a class="btn btn-ghost" href="#/dashboard">← Dashboard</a>
         <span class="brand">Resources</span>
+        <button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button>
         <button class="btn btn-ghost btn-sm" id="coachLogoutLink">Log out</button>
       </div>
       <div class="dash-body">
@@ -2458,8 +2519,8 @@ async function renderAthleteView(athleteId, tab){
     <div class="dash-shell athlete-view">
       <div class="dash-top">
         ${preview
-          ? `<a class="btn btn-ghost" href="#/dashboard/athlete/${athlete.id}">← Coach view</a><span class="tag">Preview — what ${esc(firstName(athlete.name))} would see</span>`
-          : `<span class="brand">${esc(CONFIG.BUSINESS_NAME)}</span><button class="btn btn-ghost btn-sm" id="athleteLogoutBtn">Log out</button>`
+          ? `<a class="btn btn-ghost" href="#/dashboard/athlete/${athlete.id}">← Coach view</a><span class="tag">Preview — what ${esc(firstName(athlete.name))} would see</span><button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button>`
+          : `<span class="brand">${esc(CONFIG.BUSINESS_NAME)}</span><button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button><button class="btn btn-ghost btn-sm" id="athleteLogoutBtn">Log out</button>`
         }
       </div>
       <div class="dash-body athlete-view-body">
