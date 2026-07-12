@@ -528,62 +528,88 @@ const INQUIRY_FIELDS = [
 ];
 
 /* ============================================================
-   TINY IndexedDB LAYER
+   SESSION (real accounts) — a small backend now holds all data,
+   shared across every device. This replaces the old per-browser
+   IndexedDB + local PIN. One coach account, plus a login per
+   athlete that the coach sets up once a plan is ready for them.
    ============================================================ */
-const DB_NAME = "rc_pipeline_db";
-const STORE = "athletes";
-let _dbP = null;
-function openDB(){
-  if(_dbP) return _dbP;
-  _dbP = new Promise((resolve,reject)=>{
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = e=>{
-      const db = e.target.result;
-      if(!db.objectStoreNames.contains(STORE)){
-        db.createObjectStore(STORE,{keyPath:"id"});
-      }
-    };
-    req.onsuccess = ()=>resolve(req.result);
-    req.onerror = ()=>reject(req.error);
-  });
-  return _dbP;
+const SESSION_KEY = "rc_session_v1"; // { role: "coach"|"athlete", token, athleteId? }
+function getSession(){
+  try{ return JSON.parse(localStorage.getItem(SESSION_KEY)) || null; }catch(e){ return null; }
 }
+function setSession(s){ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
+function clearSession(){ localStorage.removeItem(SESSION_KEY); }
+function isCoach(){ const s=getSession(); return !!(s && s.role==="coach" && s.token); }
+function isAthlete(id){ const s=getSession(); return !!(s && s.role==="athlete" && s.token && (!id || s.athleteId===id)); }
+
+async function apiFetch(path, opts){
+  opts = opts || {};
+  const session = getSession();
+  const headers = Object.assign({ "Content-Type":"application/json" }, opts.headers||{});
+  if(session && session.token) headers.Authorization = "Bearer " + session.token;
+  const res = await fetch(path, Object.assign({}, opts, { headers }));
+  let body = null;
+  try{ body = await res.json(); }catch(e){ /* no body */ }
+  if(res.status === 401){ clearSession(); }
+  if(!res.ok){
+    const err = new Error((body && body.error) || `Request failed (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+  return body;
+}
+
+/* ============================================================
+   DATA LAYER — thin wrappers over the API. Function names/shapes
+   are kept identical to the old IndexedDB layer on purpose, so the
+   large amount of existing render/tab code below needs almost no
+   changes: it just calls dbGetAll()/dbGet()/dbPut()/dbDelete().
+   ============================================================ */
 async function dbGetAll(){
-  const db = await openDB();
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readonly");
-    const r = tx.objectStore(STORE).getAll();
-    r.onsuccess=()=>res(r.result.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(migrateAthlete));
-    r.onerror=()=>rej(r.error);
-  });
+  const list = await apiFetch("/api/athletes");
+  return list.map(migrateAthlete);
 }
 async function dbGet(id){
-  const db = await openDB();
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readonly");
-    const r = tx.objectStore(STORE).get(id);
-    r.onsuccess=()=>res(r.result ? migrateAthlete(r.result) : r.result);
-    r.onerror=()=>rej(r.error);
-  });
+  try{
+    const a = await apiFetch(`/api/athletes/${encodeURIComponent(id)}`);
+    return a ? migrateAthlete(a) : a;
+  }catch(e){
+    if(e.status === 404) return null;
+    throw e;
+  }
 }
 async function dbPut(athlete){
-  const db = await openDB();
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readwrite");
-    tx.objectStore(STORE).put(athlete);
-    tx.oncomplete=()=>res(athlete);
-    tx.onerror=()=>rej(tx.error);
-  });
+  // Full replace — coach-only on the server. Used by every coach-side save
+  // action (overview, plan builder, race prep, check-ins, etc).
+  return apiFetch(`/api/athletes/${encodeURIComponent(athlete.id)}`, { method:"PUT", body: JSON.stringify(athlete) });
 }
 async function dbDelete(id){
-  const db = await openDB();
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readwrite");
-    tx.objectStore(STORE).delete(id);
-    tx.oncomplete=()=>res();
-    tx.onerror=()=>rej(tx.error);
+  return apiFetch(`/api/athletes/${encodeURIComponent(id)}`, { method:"DELETE" });
+}
+// The one write a logged-in athlete is allowed to make themselves: marking
+// a single session complete. Coach can call this too (used by "View as
+// Athlete" so both paths behave identically).
+async function apiPatchSession(athleteId, weekId, sessionId, completed, actual){
+  return apiFetch(`/api/athletes/${encodeURIComponent(athleteId)}/session`, {
+    method:"PATCH", body: JSON.stringify({ weekId, sessionId, completed, actual })
   });
 }
+async function apiPatchCurrentWeek(athleteId, weekIndex){
+  return apiFetch(`/api/athletes/${encodeURIComponent(athleteId)}/current-week`, {
+    method:"PATCH", body: JSON.stringify({ weekIndex })
+  });
+}
+async function getResources(){ return apiFetch("/api/resources"); }
+async function addResource(r){ return apiFetch("/api/resources", { method:"POST", body: JSON.stringify(r) }); }
+async function deleteResource(id){ return apiFetch(`/api/resources/${encodeURIComponent(id)}`, { method:"DELETE" }); }
+
+async function coachStatus(){
+  const res = await fetch("/api/coach/status");
+  return res.json();
+}
+async function coachSetup(email,password){ return apiFetch("/api/coach/setup", { method:"POST", body: JSON.stringify({email,password}) }); }
+async function coachLogin(email,password){ return apiFetch("/api/coach/login", { method:"POST", body: JSON.stringify({email,password}) }); }
+async function athleteLogin(email,password){ return apiFetch("/api/athlete/login", { method:"POST", body: JSON.stringify({email,password}) }); }
 
 /* ============================================================
    HELPERS
@@ -594,10 +620,6 @@ function firstName(name){ return (name||"there").trim().split(" ")[0]; }
 function toast(msg){
   const t=document.createElement("div"); t.className="toast"; t.textContent=msg;
   document.body.appendChild(t); setTimeout(()=>t.remove(),2400);
-}
-function simpleHash(str){
-  let h=0; for(let i=0;i<str.length;i++){ h=(h<<5)-h+str.charCodeAt(i); h|=0; }
-  return String(h);
 }
 function newAthlete(overrides){
   return Object.assign({
@@ -857,16 +879,6 @@ function computeReminders(athletes){
   });
   return reminders;
 }
-/* ------------------------------------------------------------
-   Content Library (shared coaching resources) — small enough to
-   keep in localStorage rather than adding an IndexedDB store.
-   ------------------------------------------------------------ */
-const RESOURCES_KEY = "rc_resources_v1";
-function getResources(){
-  try{ return JSON.parse(localStorage.getItem(RESOURCES_KEY)) || []; }catch(e){ return []; }
-}
-function saveResources(list){ localStorage.setItem(RESOURCES_KEY, JSON.stringify(list)); }
-
 /* ============================================================
    ROUTER
    ============================================================ */
@@ -888,6 +900,7 @@ async function render(){
     const parts = path.split("/").filter(Boolean); // ["athlete-view", id, tab?]
     return renderAthleteViewGate(parts[1], parts[2]||"dashboard");
   }
+  if(path === "/login") return renderAthleteLoginScreen();
   root.innerHTML = `<div class="container" style="padding:60px 0"><h2>Not found</h2><a href="#/">Back home</a></div>`;
 }
 
@@ -900,6 +913,7 @@ function siteHeader(){
     <div class="bar">
       <a class="brand" href="#/">${esc(CONFIG.BUSINESS_NAME)}${IS_DEMO?'<span class="badge-demo">DEMO</span>':''}</a>
       <nav>
+        <a href="#/login">Athlete login</a>
         <a href="#/dashboard">Coach login</a>
         <a class="cta" href="#/inquiry">Get started</a>
       </nav>
@@ -914,6 +928,7 @@ function siteFooter(){
       <div class="contact-row">
         ${wa ? `<a href="${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
         <a href="mailto:${esc(CONFIG.CONTACT_EMAIL)}">${esc(CONFIG.CONTACT_EMAIL)}</a>
+        <a href="#/login">Athlete login</a>
         <a href="#/dashboard">Coach login</a>
       </div>
       <div class="copyright">© ${new Date().getFullYear()} ${esc(CONFIG.BUSINESS_NAME)}</div>
@@ -1184,8 +1199,9 @@ function renderInquiry(){
     const form = e.target;
     const data = readForm(form, INQUIRY_FIELDS);
     if(!data.name || !data.email || !data.reason){ toast("Please fill in the required fields"); return; }
-    const athlete = newAthlete({ name:data.name, email:data.email, phone:data.phone, inquiry:data });
-    try{ await dbPut(athlete); }catch(e){ /* fine on athlete's own device, no local dashboard */ }
+    try{
+      await fetch("/api/inquiry", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
+    }catch(e){ /* don't block the visitor over a transient network error */ }
     const fr = await submitToFormspree({ _subject:`New inquiry: ${data.name}`, form:"inquiry", ...data });
     showFormSuccess(fr, "Thanks — that's in! I'll be in touch shortly, usually within a day.");
   });
@@ -1242,16 +1258,9 @@ function renderQuestionnaire(athleteId){
     if(missing.length){ toast("Please fill in the required fields"); return; }
 
     if(athleteId){
-      // Filling out on behalf of a known athlete on the coach's own device
-      const existing = await dbGet(athleteId);
-      if(existing){
-        existing.questionnaire = data;
-        existing.name = existing.name || data.fullName;
-        existing.email = existing.email || data.email;
-        existing.phone = existing.phone || data.phone;
-        if(existing.stage < 2) existing.stage = 2;
-        await dbPut(existing);
-      }
+      try{
+        await fetch(`/api/questionnaire/${encodeURIComponent(athleteId)}`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
+      }catch(e){ /* best effort — Formspree copy below still gets sent */ }
     }
     const fr = await submitToFormspree({ _subject:`Questionnaire: ${data.fullName||"unknown"}`, form:"questionnaire", athleteId: athleteId||"", ...data });
     showFormSuccess(fr, "Questionnaire received — thank you! I'll review this before we talk.");
@@ -1259,57 +1268,91 @@ function renderQuestionnaire(athleteId){
 }
 
 /* ============================================================
-   PIN GATE (shared by dashboard + settings)
+   AUTH GATES (real accounts, shared server-side)
    ============================================================ */
-const PIN_KEY = "rc_pin_hash";
-function hasPin(){ return !!localStorage.getItem(PIN_KEY); }
-function checkPin(pin){ return localStorage.getItem(PIN_KEY) === simpleHash(pin); }
-function setPin(pin){ localStorage.setItem(PIN_KEY, simpleHash(pin)); }
-let _unlocked = false;
-
 function renderDashboardGate(athleteId, params){
-  if(_unlocked) return renderDashboard(athleteId, params);
-  renderPinScreen(()=>{ _unlocked = true; renderDashboard(athleteId, params); });
+  if(isCoach()) return renderDashboard(athleteId, params);
+  renderCoachAuthScreen(()=>renderDashboard(athleteId, params));
 }
 function renderSettingsGate(){
-  if(_unlocked) return renderSettings();
-  renderPinScreen(()=>{ _unlocked = true; renderSettings(); });
+  if(isCoach()) return renderSettings();
+  renderCoachAuthScreen(()=>renderSettings());
 }
 function renderResourcesGate(){
-  if(_unlocked) return renderResources();
-  renderPinScreen(()=>{ _unlocked = true; renderResources(); });
+  if(isCoach()) return renderResources();
+  renderCoachAuthScreen(()=>renderResources());
 }
 function renderAthleteViewGate(athleteId, tab){
-  if(_unlocked) return renderAthleteView(athleteId, tab);
-  renderPinScreen(()=>{ _unlocked = true; renderAthleteView(athleteId, tab); });
+  if(isCoach() || isAthlete(athleteId)) return renderAthleteView(athleteId, tab);
+  renderAthleteLoginScreen();
 }
 
-function renderPinScreen(onSuccess){
-  const creating = !hasPin();
+async function renderCoachAuthScreen(onSuccess){
+  root.innerHTML = `<div class="pin-gate"><p class="muted">Loading…</p></div>`;
+  let status;
+  try{ status = await coachStatus(); }catch(e){ status = { exists:true, error:true }; }
+  const creating = !status.exists;
   root.innerHTML = `
     <div class="pin-gate">
-      <div class="pin-box">
-        <h2>${creating ? "Set a PIN" : "Enter PIN"}</h2>
+      <div class="pin-box" style="max-width:360px;">
+        <h2>${creating ? "Set up your coach account" : "Coach login"}</h2>
         <p class="muted">${creating
-          ? "This is a simple local lock to deter casual shoulder-surfing — not real security."
-          : "This device's dashboard is locked."}</p>
-        <div class="pin-dots" id="pinDots"></div>
-        <input type="password" id="pinInput" inputmode="numeric" maxlength="6" style="text-align:center;letter-spacing:6px;font-size:1.3rem;max-width:220px;margin:0 auto;display:block;">
-        ${creating ? `<p class="muted" style="margin-top:14px;">Confirm:</p><input type="password" id="pinConfirm" inputmode="numeric" maxlength="6" style="text-align:center;letter-spacing:6px;font-size:1.3rem;max-width:220px;margin:0 auto;display:block;">` : ""}
-        <button class="btn btn-primary" style="margin-top:20px;" id="pinSubmit">${creating ? "Set PIN" : "Unlock"}</button>
+          ? "This is the one account that controls your dashboard — pick a password you'll remember."
+          : "Sign in to manage your athletes."}</p>
+        <div class="field" style="text-align:left;"><label>Email</label><input type="email" id="authEmail"></div>
+        <div class="field" style="text-align:left;"><label>Password</label><input type="password" id="authPassword"></div>
+        ${creating ? `<div class="field" style="text-align:left;"><label>Confirm password</label><input type="password" id="authPasswordConfirm"></div>` : ""}
+        <button class="btn btn-primary btn-block" id="authSubmit" style="margin-top:8px;">${creating?"Create account":"Log in"}</button>
         <p style="margin-top:18px;"><a href="#/">← Back to site</a></p>
       </div>
     </div>
   `;
-  document.getElementById("pinSubmit").addEventListener("click", ()=>{
-    const pin = document.getElementById("pinInput").value.trim();
-    if(pin.length < 4){ toast("PIN should be at least 4 digits"); return; }
-    if(creating){
-      const confirm = document.getElementById("pinConfirm").value.trim();
-      if(pin !== confirm){ toast("PINs don't match"); return; }
-      setPin(pin); toast("PIN set"); onSuccess();
-    } else {
-      if(checkPin(pin)){ onSuccess(); } else { toast("Incorrect PIN"); }
+  document.getElementById("authSubmit").addEventListener("click", async ()=>{
+    const email = document.getElementById("authEmail").value.trim();
+    const password = document.getElementById("authPassword").value;
+    if(!email || !password){ toast("Fill in both fields"); return; }
+    try{
+      let result;
+      if(creating){
+        const confirmPw = document.getElementById("authPasswordConfirm").value;
+        if(password !== confirmPw){ toast("Passwords don't match"); return; }
+        if(password.length < 8){ toast("Password should be at least 8 characters"); return; }
+        result = await coachSetup(email, password);
+      } else {
+        result = await coachLogin(email, password);
+      }
+      setSession({ role:"coach", token: result.token });
+      toast(creating ? "Account created" : "Welcome back");
+      onSuccess();
+    }catch(e){
+      toast(e.message || "Something went wrong");
+    }
+  });
+}
+
+function renderAthleteLoginScreen(){
+  root.innerHTML = `
+    <div class="pin-gate">
+      <div class="pin-box" style="max-width:360px;">
+        <h2>Athlete login</h2>
+        <p class="muted">Log in with the email and password your coach set up for you.</p>
+        <div class="field" style="text-align:left;"><label>Email</label><input type="email" id="alEmail"></div>
+        <div class="field" style="text-align:left;"><label>Password</label><input type="password" id="alPassword"></div>
+        <button class="btn btn-primary btn-block" id="alSubmit" style="margin-top:8px;">Log in</button>
+        <p style="margin-top:18px;"><a href="#/">← Back to site</a></p>
+      </div>
+    </div>
+  `;
+  document.getElementById("alSubmit").addEventListener("click", async ()=>{
+    const email = document.getElementById("alEmail").value.trim();
+    const password = document.getElementById("alPassword").value;
+    if(!email || !password){ toast("Fill in both fields"); return; }
+    try{
+      const result = await athleteLogin(email, password);
+      setSession({ role:"athlete", token: result.token, athleteId: result.athleteId });
+      location.hash = `#/athlete-view/${result.athleteId}/dashboard`;
+    }catch(e){
+      toast(e.message || "Login failed");
     }
   });
 }
@@ -1338,6 +1381,7 @@ async function renderDashboard(athleteId, params){
           <a class="btn btn-ghost" href="#/dashboard/resources">Resources</a>
           <a class="btn btn-ghost" href="#/settings">Settings</a>
           <a class="btn btn-ghost" href="#/">View site</a>
+          <button class="btn btn-ghost" id="coachLogoutLink">Log out</button>
         </div>
       </div>
       <div class="dash-body">
@@ -1420,6 +1464,7 @@ async function renderDashboard(athleteId, params){
   document.getElementById("addAthleteBtn").addEventListener("click", async ()=>{
     openAddAthleteModal();
   });
+  document.getElementById("coachLogoutLink").addEventListener("click", ()=>{ clearSession(); location.hash="#/"; });
 }
 
 function openAddAthleteModal(){
@@ -1489,6 +1534,7 @@ async function renderAthleteProfile(athlete, params){
         <div>
           <a class="btn btn-ghost" href="#/dashboard/resources">Resources</a>
           <a class="btn btn-ghost" href="#/settings">Settings</a>
+          <button class="btn btn-ghost" id="coachLogoutLink">Log out</button>
         </div>
       </div>
       <div class="dash-body">
@@ -1527,6 +1573,7 @@ async function renderAthleteProfile(athlete, params){
       location.hash = "#/dashboard";
     }
   });
+  document.getElementById("coachLogoutLink").addEventListener("click", ()=>{ clearSession(); location.hash="#/"; });
   document.querySelectorAll(".tab-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{ _activeTab = btn.dataset.tab; renderTab(athlete); });
   });
@@ -1584,10 +1631,62 @@ function tabOverview(a){
       </div>
     </div>
     <div class="card" style="margin-top:16px;">
+      <h3>Athlete login</h3>
+      <p class="muted">${a.hasLogin ? `This athlete can log in at any time with ${esc(a.email||"their email")} and the password you set.` : "No login set up yet — until you set one, they can't see their own dashboard."}</p>
+      ${!a.email ? `<p class="muted">Add an email above first, then save, before setting up a login.</p>` : `
+        <button class="btn btn-secondary btn-sm" id="setPasswordBtn">${a.hasLogin?"Reset password":"Set up login"}</button>
+      `}
+    </div>
+    <div class="card" style="margin-top:16px;">
       <h3>Strava</h3>
       <div id="stravaOverviewBox"><p class="muted">Checking connection…</p></div>
     </div>
   `;
+}
+function openSetAthletePasswordModal(a){
+  const generated = Math.random().toString(36).slice(2,8) + Math.floor(Math.random()*90+10);
+  const loginUrl = location.origin + location.pathname + "#/login";
+  const wrap = document.createElement("div");
+  wrap.className = "modal-backdrop";
+  wrap.innerHTML = `
+    <div class="modal-box">
+      <h3>${a.hasLogin?"Reset":"Set up"} login for ${esc(a.name||"this athlete")}</h3>
+      <p class="muted">They'll log in at <code>${esc(loginUrl)}</code> with their email (${esc(a.email)}) and this password.</p>
+      <div class="field"><label>Password</label><input type="text" id="apPassword" value="${esc(generated)}"></div>
+      <div class="row-actions">
+        <button class="btn btn-primary" id="apSave">Save</button>
+        <button class="btn btn-secondary" id="apCancel">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector("#apCancel").addEventListener("click", ()=>wrap.remove());
+  wrap.querySelector("#apSave").addEventListener("click", async ()=>{
+    const password = document.getElementById("apPassword").value;
+    if(password.length<6){ toast("Use at least 6 characters"); return; }
+    try{
+      await apiFetch(`/api/athletes/${encodeURIComponent(a.id)}/password`, { method:"PUT", body: JSON.stringify({password}) });
+      a.hasLogin = true;
+      const message = `Hi ${firstName(a.name)}! Your training dashboard is ready: ${loginUrl}\n\nLogin: ${a.email}\nPassword: ${password}`;
+      const wa = waLink(a.phone, message);
+      wrap.innerHTML = `
+        <div class="modal-box">
+          <h3>Login saved</h3>
+          <p>Send these details to ${esc(a.name)}:</p>
+          <div class="template-box">${esc(message)}</div>
+          <div class="template-actions">
+            <button class="btn btn-secondary btn-sm" id="apCopy">Copy</button>
+            ${wa?`<a class="btn btn-moss btn-sm" href="${esc(wa)}" target="_blank" rel="noopener">Send via WhatsApp</a>`:""}
+          </div>
+          <button class="btn btn-secondary" style="margin-top:14px;" id="apDone">Done</button>
+        </div>`;
+      document.getElementById("apCopy").addEventListener("click", ()=>{
+        navigator.clipboard.writeText(message).then(()=>toast("Copied"));
+      });
+      document.getElementById("apDone").addEventListener("click", ()=>{ wrap.remove(); renderAthleteProfile(a); });
+    }catch(e){
+      toast(e.message || "Couldn't save password");
+    }
+  });
 }
 function tabRacePrep(a){
   const daysLeft = daysUntil(a.goalRaceDate);
@@ -1977,6 +2076,8 @@ function wireTab(tab, a){
       a.messages.push({ date: new Date().toISOString().slice(0,10), text });
       await dbPut(a); toast("Message saved"); renderTab(a);
     });
+    const setPwBtn = document.getElementById("setPasswordBtn");
+    if(setPwBtn) setPwBtn.addEventListener("click", ()=>openSetAthletePasswordModal(a));
     renderStravaOverviewBox(a);
   }
   if(tab==="raceprep"){
@@ -2112,6 +2213,7 @@ function renderSettings(){
       <div class="dash-top">
         <a class="btn btn-ghost" href="#/dashboard">← Dashboard</a>
         <span class="brand">Settings</span>
+        <button class="btn btn-ghost" id="coachLogoutLink">Log out</button>
       </div>
       <div class="dash-body">
         <div class="container" style="padding:0;max-width:640px;margin:0;">
@@ -2127,15 +2229,16 @@ function renderSettings(){
             </table>
           </div>
           <div class="card" style="margin-bottom:18px;">
-            <h3>Reset PIN</h3>
-            <div class="field"><label>Current PIN</label><input type="password" id="curPin" maxlength="6"></div>
-            <div class="field"><label>New PIN</label><input type="password" id="newPin" maxlength="6"></div>
-            <div class="field"><label>Confirm new PIN</label><input type="password" id="confPin" maxlength="6"></div>
-            <button class="btn btn-secondary btn-sm" id="resetPinBtn">Update PIN</button>
+            <h3>Change password</h3>
+            <p class="muted">Your coach account login — this is what you use to sign into the dashboard from any device now.</p>
+            <div class="field"><label>Current password</label><input type="password" id="curPw"></div>
+            <div class="field"><label>New password</label><input type="password" id="newPw"></div>
+            <div class="field"><label>Confirm new password</label><input type="password" id="confPw"></div>
+            <button class="btn btn-secondary btn-sm" id="changePwBtn">Update password</button>
           </div>
           <div class="card">
             <h3>Backup</h3>
-            <p class="muted">Export regularly — this is the only backup of your athlete data.</p>
+            <p class="muted">Export regularly as an extra safety net alongside the database's own backups.</p>
             <div class="row-actions">
               <button class="btn btn-primary btn-sm" id="exportBtn">Export JSON</button>
               <label class="btn btn-secondary btn-sm" for="importFile" style="cursor:pointer;">Import JSON</label>
@@ -2146,14 +2249,22 @@ function renderSettings(){
       </div>
     </div>
   `;
-  document.getElementById("resetPinBtn").addEventListener("click", ()=>{
-    const cur = document.getElementById("curPin").value.trim();
-    const next = document.getElementById("newPin").value.trim();
-    const conf = document.getElementById("confPin").value.trim();
-    if(!checkPin(cur)){ toast("Current PIN is incorrect"); return; }
-    if(next.length<4){ toast("New PIN should be at least 4 digits"); return; }
-    if(next!==conf){ toast("New PINs don't match"); return; }
-    setPin(next); toast("PIN updated");
+  document.getElementById("coachLogoutLink").addEventListener("click", ()=>{ clearSession(); location.hash="#/"; });
+  document.getElementById("changePwBtn").addEventListener("click", async ()=>{
+    const current = document.getElementById("curPw").value;
+    const next = document.getElementById("newPw").value;
+    const conf = document.getElementById("confPw").value;
+    if(next.length<8){ toast("New password should be at least 8 characters"); return; }
+    if(next!==conf){ toast("New passwords don't match"); return; }
+    try{
+      await apiFetch("/api/coach/password", { method:"PUT", body: JSON.stringify({ currentPassword:current, newPassword:next }) });
+      toast("Password updated");
+      document.getElementById("curPw").value = "";
+      document.getElementById("newPw").value = "";
+      document.getElementById("confPw").value = "";
+    }catch(e){
+      toast(e.message || "Couldn't update password");
+    }
   });
   document.getElementById("exportBtn").addEventListener("click", async ()=>{
     const athletes = await dbGetAll();
@@ -2182,20 +2293,23 @@ function renderSettings(){
 /* ============================================================
    CONTENT LIBRARY (shared resources — #/dashboard/resources)
    ============================================================ */
-function renderResources(){
-  const resources = getResources();
+async function renderResources(){
+  root.innerHTML = `<div class="dash-shell"><div class="dash-body"><p class="muted">Loading…</p></div></div>`;
+  let resources = [];
+  try{ resources = await getResources(); }catch(e){ toast(e.message||"Couldn't load resources"); }
   root.innerHTML = `
     <div class="dash-shell">
       <div class="dash-top">
         <a class="btn btn-ghost" href="#/dashboard">← Dashboard</a>
         <span class="brand">Resources</span>
+        <button class="btn btn-ghost btn-sm" id="coachLogoutLink">Log out</button>
       </div>
       <div class="dash-body">
         <div class="container" style="padding:0;max-width:720px;margin:0;">
           <p class="muted">Create once, share with any athlete — warm-ups, strength sessions, pace guides, race prep, recovery tips.</p>
           <button class="btn btn-primary btn-sm" id="addResourceBtn">+ Add resource</button>
           <div style="margin-top:16px;">
-            ${resources.length ? resources.map((r,i)=>`
+            ${resources.length ? resources.map(r=>`
               <div class="list-item">
                 <div class="meta">${esc(r.category||"General")}</div>
                 <strong>${esc(r.title)}</strong>
@@ -2203,7 +2317,7 @@ function renderResources(){
                 ${r.link?`<div><a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(r.link)}</a></div>`:""}
                 <div class="row-actions">
                   <button class="btn btn-ghost btn-sm copyBtn" data-text="${esc(r.body||"")}">Copy</button>
-                  <button class="btn btn-ghost btn-sm removeResource" data-i="${i}">Remove</button>
+                  <button class="btn btn-ghost btn-sm removeResource" data-id="${esc(r.id)}">Remove</button>
                 </div>
               </div>
             `).join("") : `<p class="muted">No resources yet — files/content need to be created by you, then added here as text or links.</p>`}
@@ -2216,12 +2330,11 @@ function renderResources(){
     btn.addEventListener("click", ()=>{ navigator.clipboard.writeText(btn.dataset.text).then(()=>toast("Copied")); });
   });
   document.getElementById("addResourceBtn").addEventListener("click", ()=>openResourceModal());
+  document.getElementById("coachLogoutLink").addEventListener("click", ()=>{ clearSession(); location.hash="#/"; });
   document.querySelectorAll(".removeResource").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      const list = getResources();
-      list.splice(parseInt(btn.dataset.i,10),1);
-      saveResources(list);
-      renderResources();
+    btn.addEventListener("click", async ()=>{
+      try{ await deleteResource(btn.dataset.id); renderResources(); }
+      catch(e){ toast(e.message||"Couldn't remove"); }
     });
   });
 }
@@ -2251,20 +2364,21 @@ function openResourceModal(){
     </div>`;
   document.body.appendChild(wrap);
   wrap.querySelector("#rsCancel").addEventListener("click", ()=>wrap.remove());
-  wrap.querySelector("#rsSave").addEventListener("click", ()=>{
+  wrap.querySelector("#rsSave").addEventListener("click", async ()=>{
     const title = document.getElementById("rsTitle").value.trim();
     if(!title){ toast("Title required"); return; }
-    const list = getResources();
-    list.push({
-      id: uid(),
-      category: document.getElementById("rsCategory").value,
-      title,
-      body: document.getElementById("rsBody").value.trim(),
-      link: document.getElementById("rsLink").value.trim()
-    });
-    saveResources(list);
-    wrap.remove();
-    renderResources();
+    try{
+      await addResource({
+        category: document.getElementById("rsCategory").value,
+        title,
+        body: document.getElementById("rsBody").value.trim(),
+        link: document.getElementById("rsLink").value.trim()
+      });
+      wrap.remove();
+      renderResources();
+    }catch(e){
+      toast(e.message || "Couldn't save resource");
+    }
   });
 }
 
@@ -2290,11 +2404,14 @@ async function renderAthleteView(athleteId, tab){
     return;
   }
   tab = tab || "dashboard";
+  const preview = isCoach();
   root.innerHTML = `
     <div class="dash-shell athlete-view">
       <div class="dash-top">
-        <a class="btn btn-ghost" href="#/dashboard/athlete/${athlete.id}">← Coach view</a>
-        <span class="tag">Preview — what ${esc(firstName(athlete.name))} would see</span>
+        ${preview
+          ? `<a class="btn btn-ghost" href="#/dashboard/athlete/${athlete.id}">← Coach view</a><span class="tag">Preview — what ${esc(firstName(athlete.name))} would see</span>`
+          : `<span class="brand">${esc(CONFIG.BUSINESS_NAME)}</span><button class="btn btn-ghost btn-sm" id="athleteLogoutBtn">Log out</button>`
+        }
       </div>
       <div class="dash-body athlete-view-body">
         <div id="athleteTabContent"></div>
@@ -2306,6 +2423,12 @@ async function renderAthleteView(athleteId, tab){
       </div>
     </div>
   `;
+  if(!preview){
+    document.getElementById("athleteLogoutBtn").addEventListener("click", ()=>{
+      clearSession();
+      location.hash = "#/login";
+    });
+  }
   renderAthleteTabContent(athlete, tab);
 }
 
@@ -2460,17 +2583,22 @@ function openCompleteSessionModal(a, si){
   document.body.appendChild(wrap);
   wrap.querySelector("#mcCancel").addEventListener("click", ()=>wrap.remove());
   wrap.querySelector("#mcSave").addEventListener("click", async ()=>{
-    s.completed = true;
-    s.actual = {
+    const actual = {
       distance: document.getElementById("mcDistance").value.trim(),
       time: document.getElementById("mcTime").value.trim(),
       rpe: document.getElementById("mcRpe").value.trim(),
       notes: document.getElementById("mcNotes").value.trim()
     };
-    await dbPut(a);
-    wrap.remove();
-    toast("Session marked complete");
-    renderAthleteTabContent(a, "training");
+    try{
+      await apiPatchSession(a.id, week.id, s.id, true, actual);
+      s.completed = true;
+      s.actual = actual;
+      wrap.remove();
+      toast("Session marked complete");
+      renderAthleteTabContent(a, "training");
+    }catch(e){
+      toast(e.message || "Couldn't save — try again");
+    }
   });
 }
 
@@ -2571,18 +2699,14 @@ function wireAthleteView(tab, a){
     const prevBtn = document.getElementById("avPrevWeek");
     const nextBtn = document.getElementById("avNextWeek");
     const sel = document.getElementById("avWeekSelect");
-    if(prevBtn) prevBtn.addEventListener("click", ()=>{
-      a.currentWeekIndex = Math.max(0,(a.currentWeekIndex||0)-1);
+    async function goToWeek(idx){
+      a.currentWeekIndex = idx;
       renderAthleteTabContent(a, "training");
-    });
-    if(nextBtn) nextBtn.addEventListener("click", ()=>{
-      a.currentWeekIndex = Math.min(getWeeks(a).length-1,(a.currentWeekIndex||0)+1);
-      renderAthleteTabContent(a, "training");
-    });
-    if(sel) sel.addEventListener("change", ()=>{
-      a.currentWeekIndex = parseInt(sel.value,10);
-      renderAthleteTabContent(a, "training");
-    });
+      try{ await apiPatchCurrentWeek(a.id, idx); }catch(e){ /* view already updated; not worth blocking on */ }
+    }
+    if(prevBtn) prevBtn.addEventListener("click", ()=>goToWeek(Math.max(0,(a.currentWeekIndex||0)-1)));
+    if(nextBtn) nextBtn.addEventListener("click", ()=>goToWeek(Math.min(getWeeks(a).length-1,(a.currentWeekIndex||0)+1)));
+    if(sel) sel.addEventListener("change", ()=>goToWeek(parseInt(sel.value,10)));
   }
 }
 </script>
