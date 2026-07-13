@@ -888,6 +888,121 @@ function fmtDate(dateStr){
   if(isNaN(d)) return dateStr;
   return d.toLocaleDateString(undefined,{ day:"numeric", month:"short", year:"numeric" });
 }
+
+/* ============================================================
+   CALENDAR EXPORT (.ics) — lets an athlete add a session, or a
+   whole week, to their phone's calendar (Android + iPhone both
+   handle a downloaded .ics the same way: open it, tap "Add").
+   ============================================================ */
+const WEEKDAY_OFFSETS = {
+  monday:0, mon:0, tuesday:1, tue:1, tues:1, wednesday:2, wed:2,
+  thursday:3, thu:3, thur:3, thurs:3, friday:4, fri:4,
+  saturday:5, sat:5, sunday:6, sun:6
+};
+function weekdayOffset(dayStr){
+  if(!dayStr) return null;
+  const key = String(dayStr).trim().toLowerCase().replace(/[^a-z]/g,"");
+  return Object.prototype.hasOwnProperty.call(WEEKDAY_OFFSETS, key) ? WEEKDAY_OFFSETS[key] : null;
+}
+// yyyy-mm-dd using the Date object's LOCAL fields — toISOString() would
+// convert to UTC first, which silently shifts the date by a day for any
+// timezone behind UTC at local midnight (including all of Australia).
+function toLocalISODate(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+// Real calendar date (yyyy-mm-dd) for a session, derived from its week's
+// start date + the session's day name. Returns null if either is missing
+// or the day name can't be recognised.
+function sessionDateISO(week, session){
+  if(!week || !week.startDate) return null;
+  const offset = weekdayOffset(session && session.day);
+  if(offset==null) return null;
+  const d = new Date(week.startDate+"T00:00:00");
+  if(isNaN(d)) return null;
+  d.setDate(d.getDate()+offset);
+  return toLocalISODate(d);
+}
+function icsEscape(str){
+  return String(str||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");
+}
+// RFC5545 line folding — continuation lines start with a single space.
+function foldICSLine(line){
+  if(line.length<=73) return line;
+  let out = "", i = 0;
+  while(i<line.length){ out += (i===0?"":"\r\n ") + line.slice(i,i+73); i+=73; }
+  return out;
+}
+const ICS_DEFAULT_HOUR = "0600"; // placeholder time — athlete can drag it in their calendar app
+function buildSessionVEvent(a, week, session){
+  const dateISO = sessionDateISO(week, session);
+  if(!dateISO) return null;
+  const dateCompact = dateISO.replace(/-/g,"");
+  const dtStart = `${dateCompact}T${ICS_DEFAULT_HOUR}00`;
+  const dtEnd = `${dateCompact}T${(parseInt(ICS_DEFAULT_HOUR.slice(0,2),10)+1).toString().padStart(2,"0")}${ICS_DEFAULT_HOUR.slice(2)}00`;
+  const summary = icsEscape(`${session.type||"Training session"}${session.distance?" - "+session.distance+"km":""}`);
+  const descParts = [];
+  if(session.pace) descParts.push("Pace: "+session.pace);
+  if(session.warmup) descParts.push("Warm-up: "+session.warmup);
+  if(session.main) descParts.push("Main: "+session.main);
+  if(session.cooldown) descParts.push("Cool-down: "+session.cooldown);
+  if(session.description) descParts.push(session.description);
+  if(session.coachNotes) descParts.push("Coach notes: "+session.coachNotes);
+  const description = icsEscape(descParts.join("\n"));
+  const stamp = new Date().toISOString().replace(/[-:]/g,"").split(".")[0]+"Z";
+  return [
+    "BEGIN:VEVENT",
+    `UID:${session.id||uid()}@${a.id||"athlete"}.${(CONFIG.BUSINESS_NAME||"runningcoach").replace(/[^a-z0-9]/gi,"").toLowerCase()}`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART:${dtStart}`,
+    `DTEND:${dtEnd}`,
+    foldICSLine(`SUMMARY:${summary}`),
+    foldICSLine(`DESCRIPTION:${description}`),
+    "END:VEVENT"
+  ].join("\r\n");
+}
+function buildICS(vevents){
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    `PRODID:-//${(CONFIG.BUSINESS_NAME||"Running Coach").replace(/[\r\n]/g,"")}//Training Plan//EN`,
+    "CALSCALE:GREGORIAN",
+    ...vevents,
+    "END:VCALENDAR"
+  ].join("\r\n");
+}
+function downloadICS(content, filename){
+  const blob = new Blob([content], { type:"text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+function addSessionToCalendar(a, week, session){
+  const vevent = buildSessionVEvent(a, week, session);
+  if(!vevent){
+    toast("Couldn't work out a date for this session — ask your coach to check the week's start date and this session's day.");
+    return;
+  }
+  const safeName = (session.type||"session").replace(/[^a-z0-9]+/gi,"-").toLowerCase();
+  downloadICS(buildICS([vevent]), `${safeName}.ics`);
+  toast("Calendar file downloaded — open it to add to your calendar");
+}
+function addWeekToCalendar(a, week){
+  const vevents = (week.sessions||[]).map(s=>buildSessionVEvent(a, week, s)).filter(Boolean);
+  if(!vevents.length){
+    toast("No sessions with a recognised day yet — ask your coach to check the week's start date and session days.");
+    return;
+  }
+  downloadICS(buildICS(vevents), `week-${week.weekNumber||""}-training.ics`);
+  toast(`Calendar file downloaded with ${vevents.length} session${vevents.length===1?"":"s"}`);
+}
 /* Current streak = consecutive fully-completed weeks counting back from the
    athlete's current week (not counting an in-progress current week). */
 function computeStreak(a){
@@ -1722,6 +1837,22 @@ function tabOverview(a){
       ${daysLeft!=null ? `<p class="muted">${daysLeft>=0 ? `${daysLeft} day${daysLeft===1?"":"s"} until race day` : "Race date has passed"}</p>` : ""}
       <button class="btn btn-secondary btn-sm" id="ovSave">Save</button>
     </div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>Training block overview</h3>
+      <p class="muted">Shows on the athlete's Dashboard tab in the app — this is the "welcome pack" content for this training block.</p>
+      <div class="field"><label>Welcome message from you</label><textarea id="tbWelcome" rows="4" placeholder="The biggest focus of this training block is...">${esc(a.welcomeMessage)}</textarea></div>
+      <div class="grid2">
+        <div class="field"><label>Recent race performance</label><input type="text" id="tbRecentRace" value="${esc(a.recentRacePerformance)}" placeholder="e.g. Sydney Hoka Half Marathon – 2:22"></div>
+        <div class="field"><label>Current weekly running volume</label><input type="text" id="tbWeeklyVolume" value="${esc(a.currentWeeklyVolume)}" placeholder="e.g. Approximately 5km per week"></div>
+      </div>
+      <div class="field"><label>Current focus areas (one per line)</label><textarea id="tbFocusAreas" rows="3" placeholder="Building consistent running habits&#10;Improving aerobic fitness">${esc((a.currentFocusAreas||[]).join("\n"))}</textarea></div>
+      <div class="grid2">
+        <div class="field"><label>A Goal (stretch)</label><input type="text" id="tbGoalA" value="${esc(a.goalA)}" placeholder="e.g. Sub 1:20"></div>
+        <div class="field"><label>B Goal (solid)</label><input type="text" id="tbGoalB" value="${esc(a.goalB)}" placeholder="e.g. Strong, controlled pacing"></div>
+        <div class="field" style="grid-column:1/-1;"><label>C Goal (minimum success)</label><input type="text" id="tbGoalC" value="${esc(a.goalC)}" placeholder="e.g. Finish comfortably and enjoy it"></div>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="tbSave">Save training block overview</button>
+    </div>
     <div class="grid2">
       <div class="card">
         <h3>Inquiry</h3>
@@ -1934,11 +2065,13 @@ function tabPlan(a){
             <h3 style="margin-bottom:2px;">Week ${esc(w.weekNumber)} ${isCurrent?'<span class="tag">Current</span>':''}</h3>
             <span class="muted">${p.completed}/${p.total} sessions · ${p.distanceCompleted}/${p.distanceTotal}km${w.startDate?` · starts ${fmtDate(w.startDate)}`:""}</span>
           </div>
-          <div class="row-actions">
+          <div class="row-actions" style="align-items:flex-end;">
+            <div class="field" style="margin:0;"><label style="font-size:.72rem;">Week starts</label><input type="date" class="weekStartDate" data-wi="${wi}" value="${esc(w.startDate||"")}" style="width:auto;"></div>
             ${!isCurrent?`<button class="btn btn-ghost btn-sm setCurrentWeek" data-wi="${wi}">Set as current</button>`:""}
             <button class="btn btn-ghost btn-sm removeWeek" data-wi="${wi}">Remove week</button>
           </div>
         </div>
+        <p class="muted" style="font-size:.78rem;margin-top:-8px;">Week start date must be correct for "Add to calendar" to land on the right days.</p>
         <div class="field"><label>Coach focus for this week</label><textarea class="weekFocus" data-wi="${wi}" rows="2" placeholder="Focus on consistency rather than pace...">${esc(w.coachFocus||"")}</textarea></div>
         <button class="btn btn-secondary btn-sm saveWeekFocus" data-wi="${wi}">Save focus</button>
         <div style="margin-top:14px;">
@@ -1971,7 +2104,12 @@ function openSessionModal(a, wi, si){
     <div class="modal-box">
       <h3>${existing?"Edit session":"Add session"}</h3>
       <div class="grid2">
-        <div class="field"><label>Day</label><input type="text" id="smDay" value="${esc(s.day)}" placeholder="Tuesday"></div>
+        <div class="field"><label>Day</label>
+          <select id="smDay">
+            <option value="">—</option>
+            ${["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(d=>`<option value="${d}" ${s.day===d?"selected":""}>${d}</option>`).join("")}
+          </select>
+        </div>
         <div class="field"><label>Type</label><input type="text" id="smType" value="${esc(s.type)}" placeholder="Intervals / Long Run / Easy Run"></div>
         <div class="field"><label>Distance (km)</label><input type="text" id="smDistance" value="${esc(s.distance)}"></div>
         <div class="field"><label>Pace</label><input type="text" id="smPace" value="${esc(s.pace)}" placeholder="6:45-7:00/km"></div>
@@ -2177,6 +2315,16 @@ function wireTab(tab, a){
       a.availability = document.getElementById("ovAvailability").value.trim();
       await dbPut(a); toast("Saved"); renderAthleteProfile(a);
     });
+    document.getElementById("tbSave").addEventListener("click", async ()=>{
+      a.welcomeMessage = document.getElementById("tbWelcome").value.trim();
+      a.recentRacePerformance = document.getElementById("tbRecentRace").value.trim();
+      a.currentWeeklyVolume = document.getElementById("tbWeeklyVolume").value.trim();
+      a.currentFocusAreas = document.getElementById("tbFocusAreas").value.split("\n").map(s=>s.trim()).filter(Boolean);
+      a.goalA = document.getElementById("tbGoalA").value.trim();
+      a.goalB = document.getElementById("tbGoalB").value.trim();
+      a.goalC = document.getElementById("tbGoalC").value.trim();
+      await dbPut(a); toast("Training block overview saved");
+    });
     document.getElementById("msgSave").addEventListener("click", async ()=>{
       const text = document.getElementById("msgText").value.trim();
       if(!text){ toast("Write a message first"); return; }
@@ -2238,6 +2386,13 @@ function wireTab(tab, a){
       const nextNum = a.plan.weeks.length ? Math.max(...a.plan.weeks.map(w=>w.weekNumber||0))+1 : 1;
       a.plan.weeks.push({ id: uid(), weekNumber: nextNum, startDate: new Date().toISOString().slice(0,10), coachFocus:"", sessions:[] });
       await dbPut(a); toast("Week added"); renderTab(a);
+    });
+    document.querySelectorAll(".weekStartDate").forEach(inp=>{
+      inp.addEventListener("change", async ()=>{
+        const wi = parseInt(inp.dataset.wi,10);
+        a.plan.weeks[wi].startDate = inp.value;
+        await dbPut(a); toast("Week start date saved");
+      });
     });
     document.querySelectorAll(".setCurrentWeek").forEach(btn=>{
       btn.addEventListener("click", async ()=>{
@@ -2571,6 +2726,37 @@ function avDashboard(a){
       ` : ""}
     </div>
 
+    ${a.welcomeMessage ? `
+    <div class="card">
+      <h3>A note from ${esc(CONFIG.COACH_FIRST)}</h3>
+      <p style="margin:0;white-space:pre-wrap;">${esc(a.welcomeMessage)}</p>
+    </div>` : ""}
+
+    ${(a.goalA || a.goalB || a.goalC || (a.currentFocusAreas||[]).length || a.recentRacePerformance || a.currentWeeklyVolume) ? `
+    <div class="card">
+      <h3>Your goals for this block</h3>
+      ${a.recentRacePerformance ? `<div class="muted" style="margin-bottom:2px;"><strong>Recent race:</strong> ${esc(a.recentRacePerformance)}</div>` : ""}
+      ${a.currentWeeklyVolume ? `<div class="muted" style="margin-bottom:10px;"><strong>Starting volume:</strong> ${esc(a.currentWeeklyVolume)}</div>` : ""}
+      ${(a.currentFocusAreas||[]).length ? `
+        <div style="margin-bottom:10px;">
+          <strong style="font-size:.88rem;">Focus areas</strong>
+          <ul style="margin:4px 0 0;padding-left:20px;">
+            ${(a.currentFocusAreas||[]).map(f=>`<li style="font-size:.9rem;">${esc(f)}</li>`).join("")}
+          </ul>
+        </div>` : ""}
+      ${a.goalA ? `<div style="font-size:.9rem;margin-bottom:2px;"><strong>A Goal:</strong> ${esc(a.goalA)}</div>` : ""}
+      ${a.goalB ? `<div style="font-size:.9rem;margin-bottom:2px;"><strong>B Goal:</strong> ${esc(a.goalB)}</div>` : ""}
+      ${a.goalC ? `<div style="font-size:.9rem;"><strong>C Goal:</strong> ${esc(a.goalC)}</div>` : ""}
+    </div>` : ""}
+
+    ${Object.values(a.plan?.paceZones||{}).some(v=>v) ? `
+    <div class="card">
+      <h3>Pace guide</h3>
+      <table class="simple">
+        ${Object.entries(a.plan.paceZones).filter(([,v])=>v).map(([k,v])=>`<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}
+      </table>
+    </div>` : ""}
+
     <div class="card av-next-workout">
       <h3 style="margin-bottom:4px;">Today's Session</h3>
       ${nextSession ? `
@@ -2633,6 +2819,9 @@ function avTraining(a){
         ${weeks.map((w,i)=>`<option value="${i}" ${i===idx?"selected":""}>Week ${esc(w.weekNumber)}</option>`).join("")}
       </select>
       <button class="btn btn-ghost btn-sm" id="avNextWeek" ${idx>=weeks.length-1?"disabled":""}>Next →</button>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-secondary btn-sm" id="avAddWeekCal">📅 Add this week to calendar</button>
     </div>` : ""}
     ${!week ? `<p class="muted">No weeks in this plan yet — check back once your coach has built your training block.</p>` : `
       ${celebrate ? `
@@ -2658,6 +2847,7 @@ function avTraining(a){
               ${s.coachNotes?`<p><strong>Coach notes:</strong> ${esc(s.coachNotes)}</p>`:""}
               ${!s.warmup && !s.main && !s.cooldown && !s.coachNotes && s.description ? `<p>${esc(s.description)}</p>`:""}
               ${s.completed ? `<p class="muted">Actual: ${esc(s.actual&&s.actual.distance||"—")}km, ${esc(s.actual&&s.actual.time||"—")}, RPE ${esc(s.actual&&s.actual.rpe||"—")}${s.actual&&s.actual.notes?` — "${esc(s.actual.notes)}"`:""}</p>` : `<button class="btn btn-primary btn-sm markCompleteBtn" data-si="${si}">Mark Complete</button>`}
+              <button class="btn btn-ghost btn-sm avAddSessionCal" data-si="${si}" style="margin-left:6px;">📅 Add to calendar</button>
             </div>
           </div>
         `).join("")}
@@ -2805,6 +2995,19 @@ function wireAthleteView(tab, a){
         e.stopPropagation();
         openCompleteSessionModal(a, parseInt(btn.dataset.si,10));
       });
+    });
+    document.querySelectorAll(".avAddSessionCal").forEach(btn=>{
+      btn.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        const week = getCurrentWeek(a);
+        const session = week && week.sessions[parseInt(btn.dataset.si,10)];
+        if(session) addSessionToCalendar(a, week, session);
+      });
+    });
+    const weekCalBtn = document.getElementById("avAddWeekCal");
+    if(weekCalBtn) weekCalBtn.addEventListener("click", ()=>{
+      const week = getCurrentWeek(a);
+      if(week) addWeekToCalendar(a, week);
     });
     const prevBtn = document.getElementById("avPrevWeek");
     const nextBtn = document.getElementById("avNextWeek");
