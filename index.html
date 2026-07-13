@@ -632,6 +632,13 @@ const INQUIRY_FIELDS = [
   { id:"commitment", label:"How many days a week can you commit to training?", type:"text" }
 ];
 
+// Minimal "Get in touch" form — for a quick question, not a coaching sign-up.
+const CONTACT_FIELDS = [
+  { id:"name", label:"Your name", type:"text", required:true },
+  { id:"email", label:"Email", type:"email", required:true },
+  { id:"question", label:"Your question", type:"textarea", required:true }
+];
+
 /* ============================================================
    SESSION (real accounts) — a small backend now holds all data,
    shared across every device. This replaces the old per-browser
@@ -1111,6 +1118,7 @@ async function render(){
   window.scrollTo(0,0);
   if(path === "/" || path === "") return renderLanding();
   if(path === "/inquiry") return renderInquiry();
+  if(path === "/contact") return renderContact();
   if(path === "/questionnaire") return renderQuestionnaire(params.athlete||null);
   if(path === "/dashboard") return renderDashboardGate();
   if(path === "/dashboard/resources") return renderResourcesGate();
@@ -1136,7 +1144,7 @@ function siteHeader(){
         <a href="#/login">Athlete login</a>
         <a href="#/dashboard">Coach login</a>
         <button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme" title="Switches between light, dark and auto (follows system + time of day)">${themeToggleLabel()}</button>
-        <a class="cta" href="#/inquiry">Get started</a>
+        <a class="cta" href="#/questionnaire">Get started</a>
       </nav>
     </div>
   </header>`;
@@ -1217,8 +1225,7 @@ function renderLanding(){
           <h1>${esc(CONFIG.HEADLINE)}</h1>
           <p class="subheading">${esc(CONFIG.SUBHEADING)}</p>
           <div class="actions">
-            <a class="btn btn-primary" href="#/inquiry">Start Coaching</a>
-            <a class="btn btn-outline-light" href="#/inquiry">Book a Free Consultation</a>
+            <a class="btn btn-primary" href="#/questionnaire">Start Coaching</a>
           </div>
         </div>
       </div>
@@ -1295,7 +1302,7 @@ function renderLanding(){
         </div>
         <div class="pricing-box">
           <p>Every plan is personalised, so pricing depends on your goals and the level of support you need. Get in touch and we'll figure out what fits.</p>
-          <a class="btn btn-primary" href="#/inquiry">Get in touch</a>
+          <a class="btn btn-primary" href="#/contact">Get in touch</a>
         </div>
       </div>
     </section>
@@ -1314,7 +1321,7 @@ function renderLanding(){
       <div class="container">
         <h2>Ready To Start Your Running Journey?</h2>
         <p>Whether your goal is a first 5K, a new PB, or completing your next race, let's build a plan that works for you.</p>
-        <a class="btn btn-primary" href="#/inquiry">Start Coaching Today</a>
+        <a class="btn btn-primary" href="#/questionnaire">Start Coaching Today</a>
       </div>
     </section>
 
@@ -1427,6 +1434,38 @@ function renderInquiry(){
     showFormSuccess(fr, "Thanks — that's in! I'll be in touch shortly, usually within a day.");
   });
 }
+/* ============================================================
+   MINIMAL CONTACT FORM  (#/contact) — a quick question, not a
+   coaching sign-up. Reuses the /api/inquiry endpoint since it
+   already accepts any freeform data blob per new lead.
+   ============================================================ */
+function renderContact(){
+  root.innerHTML = `
+    ${siteHeader()}
+    <section class="form-page">
+      <div class="container narrow">
+        <h2>Get in touch</h2>
+        <p class="muted">Got a quick question before you commit? Ask away — I'll reply within a day.</p>
+        <form id="contactForm" class="card">
+          ${CONTACT_FIELDS.map(f=>fieldHtml(f)).join("")}
+          <button class="btn btn-primary btn-block" type="submit">Send question</button>
+        </form>
+      </div>
+    </section>
+    ${siteFooter()}
+  `;
+  document.getElementById("contactForm").addEventListener("submit", async e=>{
+    e.preventDefault();
+    const form = e.target;
+    const data = readForm(form, CONTACT_FIELDS);
+    if(!data.name || !data.email || !data.question){ toast("Please fill in the required fields"); return; }
+    try{
+      await fetch("/api/inquiry", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ name:data.name, email:data.email, reason:data.question, source:"contact" }) });
+    }catch(e){ /* don't block the visitor over a transient network error */ }
+    const fr = await submitToFormspree({ _subject:`New question: ${data.name}`, form:"contact", ...data });
+    showFormSuccess(fr, "Thanks — got your question! I'll reply within a day.");
+  });
+}
 function showFormSuccess(formspreeResult, message){
   const note = (!CONFIG.FORMSPREE_ENDPOINT)
     ? `<p class="muted">Note: no Formspree endpoint is configured yet in this demo, so nothing was emailed — but your response was accepted.</p>`
@@ -1451,12 +1490,15 @@ function showFormSuccess(formspreeResult, message){
    PUBLIC QUESTIONNAIRE (#/questionnaire?athlete=ID)
    ============================================================ */
 function renderQuestionnaire(athleteId){
+  const isNew = !athleteId;
   root.innerHTML = `
     ${siteHeader()}
     <section class="form-page">
       <div class="container narrow">
         <h2>Athlete Questionnaire</h2>
-        <p class="muted">Personal details, running history, lifestyle, medical, and your goal. The more detail, the better the plan.</p>
+        <p class="muted">${isNew
+          ? "This is the real starting point — personal details, running history, lifestyle, medical, and your goal. The more detail you give me, the better the plan I can build for you."
+          : "Personal details, running history, lifestyle, medical, and your goal. The more detail, the better the plan."}</p>
         <form id="qForm" class="card">
           ${QUESTIONNAIRE_SECTIONS.map(sec=>`
             <fieldset>
@@ -1481,6 +1523,12 @@ function renderQuestionnaire(athleteId){
     if(athleteId){
       try{
         await fetch(`/api/questionnaire/${encodeURIComponent(athleteId)}`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
+      }catch(e){ /* best effort — Formspree copy below still gets sent */ }
+    } else {
+      // Brand-new visitor going straight to the full questionnaire (no
+      // existing athlete record yet) — create one from scratch.
+      try{
+        await fetch("/api/questionnaire", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
       }catch(e){ /* best effort — Formspree copy below still gets sent */ }
     }
     const fr = await submitToFormspree({ _subject:`Questionnaire: ${data.fullName||"unknown"}`, form:"questionnaire", athleteId: athleteId||"", ...data });
