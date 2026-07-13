@@ -238,6 +238,30 @@ app.post("/api/inquiry", publicLimiter, async (req, res) => {
   res.json({ id });
 });
 
+// Anonymous full-questionnaire submission — a brand-new visitor going
+// straight from the homepage "Start Coaching" CTA to the full questionnaire,
+// with no existing athlete record yet. Creates one from scratch, same as
+// /api/inquiry does, but starts them further along the pipeline (stage 2)
+// since a completed questionnaire is a much stronger signal than a bare inquiry.
+app.post("/api/questionnaire", publicLimiter, async (req, res) => {
+  const data = req.body || {};
+  const id = newId();
+  const athlete = {
+    id,
+    createdAt: Date.now(),
+    stage: 2,
+    name: data.fullName || "",
+    email: data.email || "",
+    phone: data.phone || "",
+    questionnaire: data,
+  };
+  await pool.query(
+    `INSERT INTO athletes (id, name, email, stage, data) VALUES ($1,$2,$3,2,$4)`,
+    [id, athlete.name, athlete.email, athlete]
+  );
+  res.json({ id });
+});
+
 app.post("/api/questionnaire/:athleteId", publicLimiter, async (req, res) => {
   const data = req.body || {};
   const r = await pool.query("SELECT data, stage FROM athletes WHERE id = $1", [req.params.athleteId]);
