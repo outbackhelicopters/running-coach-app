@@ -92,11 +92,26 @@ app.put("/api/coach/password", requireCoach, async (req, res) => {
   const r = await pool.query("SELECT password_hash FROM coach WHERE id = 1");
   if (r.rowCount === 0) return res.status(404).json({ error: "No coach account found" });
   if (!(await verifyPassword(currentPassword || "", r.rows[0].password_hash))) {
-    return res.status(401).json({ error: "Current password is incorrect" });
+    return res.status(403).json({ error: "Current password is incorrect" });
   }
   const hash = await hashPassword(newPassword);
   await pool.query("UPDATE coach SET password_hash = $1 WHERE id = 1", [hash]);
   res.json({ ok: true });
+});
+
+app.put("/api/coach/email", requireCoach, async (req, res) => {
+  const { currentPassword, newEmail } = req.body || {};
+  const email = (newEmail || "").trim().toLowerCase();
+  if (!email || !email.includes("@")) {
+    return res.status(400).json({ error: "A valid email is required" });
+  }
+  const r = await pool.query("SELECT password_hash FROM coach WHERE id = 1");
+  if (r.rowCount === 0) return res.status(404).json({ error: "No coach account found" });
+  if (!(await verifyPassword(currentPassword || "", r.rows[0].password_hash))) {
+    return res.status(403).json({ error: "Current password is incorrect" });
+  }
+  await pool.query("UPDATE coach SET email = $1 WHERE id = 1", [email]);
+  res.json({ ok: true, email });
 });
 
 /* ------------------------------------------------------------
