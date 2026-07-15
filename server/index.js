@@ -16,6 +16,7 @@ const {
   authMiddleware,
   requireCoach,
   requireAthleteOrCoach,
+  requireAnyLogin,
 } = require("./auth");
 
 const app = express();
@@ -301,7 +302,10 @@ app.post("/api/questionnaire/:athleteId", publicLimiter, async (req, res) => {
 /* ------------------------------------------------------------
    RESOURCES (content library) — coach-only
    ------------------------------------------------------------ */
-app.get("/api/resources", requireCoach, async (req, res) => {
+// Read is open to any logged-in user (coach or athlete) — the whole
+// point of the library is athletes can see what the coach shares.
+// Writes (add/delete) stay coach-only, just below.
+app.get("/api/resources", requireAnyLogin, async (req, res) => {
   const r = await pool.query("SELECT * FROM resources ORDER BY created_at DESC");
   res.json(r.rows);
 });

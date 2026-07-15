@@ -56,6 +56,14 @@ function requireAthleteOrCoach(req, res, next) {
   return res.status(401).json({ error: "Login required" });
 }
 
+// Any authenticated user at all — coach or any athlete — for read-only
+// endpoints every logged-in user should be able to see (not scoped to a
+// specific athlete id), like the shared resource library.
+function requireAnyLogin(req, res, next) {
+  if (req.auth && (req.auth.role === "coach" || req.auth.role === "athlete")) return next();
+  return res.status(401).json({ error: "Login required" });
+}
+
 module.exports = {
   hashPassword,
   verifyPassword,
@@ -65,4 +73,5 @@ module.exports = {
   authMiddleware,
   requireCoach,
   requireAthleteOrCoach,
+  requireAnyLogin,
 };
