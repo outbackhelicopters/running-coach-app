@@ -47,9 +47,13 @@ async function migrate(pool) {
       email TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      settings JSONB NOT NULL DEFAULT '{}'::jsonb,
       CONSTRAINT single_coach CHECK (id = 1)
     );
   `);
+  // Older deployments created the coach table before "settings" existed —
+  // add it if missing so existing coach rows aren't left without it.
+  await pool.query(`ALTER TABLE coach ADD COLUMN IF NOT EXISTS settings JSONB NOT NULL DEFAULT '{}'::jsonb;`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS athletes (
       id TEXT PRIMARY KEY,

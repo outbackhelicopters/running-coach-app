@@ -116,6 +116,22 @@ app.put("/api/coach/email", requireCoach, async (req, res) => {
 });
 
 /* ------------------------------------------------------------
+   COACH SETTINGS (access codes for free/comp athlete access —
+   payment status itself lives on the athlete record and is set via
+   the normal PUT /api/athletes/:id, same as any other field)
+   ------------------------------------------------------------ */
+app.get("/api/coach/settings", requireCoach, async (req, res) => {
+  const r = await pool.query("SELECT settings FROM coach WHERE id = 1");
+  res.json((r.rowCount && r.rows[0].settings) || {});
+});
+
+app.put("/api/coach/settings", requireCoach, async (req, res) => {
+  const settings = req.body || {};
+  await pool.query("UPDATE coach SET settings = $1 WHERE id = 1", [settings]);
+  res.json({ ok: true });
+});
+
+/* ------------------------------------------------------------
    ATHLETE AUTH
    ------------------------------------------------------------ */
 app.post("/api/athlete/login", loginLimiter, async (req, res) => {
@@ -229,6 +245,34 @@ app.patch("/api/athletes/:id/current-week", requireAthleteOrCoach, async (req, r
   res.json(rowToAthlete({ ...r.rows[0], data }));
 });
 
+// Athlete (or coach) redeems a coach-issued access code to unlock dashboard
+// access for free (giveaways, trial runners) without going through payment.
+// Narrow and safe despite being athlete-writable: it can only ever flip
+// paymentStatus to "comp" after validating against the coach's own code
+// list, never touch anything else on the record.
+app.post("/api/athletes/:id/redeem-code", requireAthleteOrCoach, async (req, res) => {
+  const code = String((req.body || {}).code || "").trim();
+  if (!code) return res.status(400).json({ error: "Enter a code" });
+  const settingsRow = await pool.query("SELECT settings FROM coach WHERE id = 1");
+  const codes = (settingsRow.rowCount && settingsRow.rows[0].settings && settingsRow.rows[0].settings.accessCodes) || [];
+  const entry = codes.find((c) => c.code && c.code.toLowerCase() === code.toLowerCase() && c.active !== false);
+  if (!entry) return res.status(404).json({ error: "That code isn't valid or has been deactivated" });
+  if (entry.maxUses && (entry.usedCount || 0) >= entry.maxUses) {
+    return res.status(410).json({ error: "That code has already been fully redeemed" });
+  }
+  const r = await pool.query("SELECT * FROM athletes WHERE id = $1", [req.params.id]);
+  if (r.rowCount === 0) return res.status(404).json({ error: "Not found" });
+  const data = r.rows[0].data || {};
+  data.paymentStatus = "comp";
+  data.accessCode = entry.code;
+  await pool.query("UPDATE athletes SET data = $1, updated_at = now() WHERE id = $2", [data, req.params.id]);
+  entry.usedCount = (entry.usedCount || 0) + 1;
+  const settings = (settingsRow.rowCount && settingsRow.rows[0].settings) || {};
+  settings.accessCodes = codes;
+  await pool.query("UPDATE coach SET settings = $1 WHERE id = 1", [settings]);
+  res.json(rowToAthlete({ ...r.rows[0], data }));
+});
+
 /* ------------------------------------------------------------
    PUBLIC — inquiry form + questionnaire (no auth; the athlete
    isn't a user yet at this point in the funnel)
@@ -246,6 +290,7 @@ app.post("/api/inquiry", publicLimiter, async (req, res) => {
     email: data.email || "",
     phone: data.phone || "",
     inquiry: data,
+    paymentStatus: "pending",
   };
   await pool.query(
     `INSERT INTO athletes (id, name, email, stage, data) VALUES ($1,$2,$3,0,$4)`,
@@ -270,6 +315,7 @@ app.post("/api/questionnaire", publicLimiter, async (req, res) => {
     email: data.email || "",
     phone: data.phone || "",
     questionnaire: data,
+    paymentStatus: "pending",
   };
   await pool.query(
     `INSERT INTO athletes (id, name, email, stage, data) VALUES ($1,$2,$3,2,$4)`,
