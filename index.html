@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Running Coach — Athlete Pipeline</title>
+<title>Tom McGookin Coaching — Athlete Pipeline</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -275,6 +275,8 @@
   .tab-btn.active{color:var(--ink);border-color:var(--rust);}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
   @media(max-width:720px){.grid2{grid-template-columns:1fr;}}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+  @media(max-width:900px){.grid3{grid-template-columns:1fr;}}
   table.simple{width:100%;border-collapse:collapse;font-size:.88rem;}
   table.simple th,table.simple td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);}
   .template-box{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;white-space:pre-wrap;font-size:.88rem;}
@@ -446,16 +448,21 @@ if(window.matchMedia){
    CONFIG — edit these values for your business
    ============================================================ */
 const CONFIG = {
-  BUSINESS_NAME: "Tom McGookin Running",
+  BUSINESS_NAME: "Tom McGookin Coaching",
   COACH_NAME: "Tom McGookin",
   COACH_FIRST: "Tom",
   TAGLINE: "Personalised run coaching, built around your life and your goal race.",
   FORMSPREE_ENDPOINT: "",
-  /* No coaching email set up yet — using a placeholder. Once you decide on one
-     (a free Gmail works fine to start, or an address at your own domain later
-     if you register one), swap it in here. */
-  CONTACT_EMAIL: "hello@tommcgookinrunning.com",
+  CONTACT_EMAIL: "tommcgookincoaching@gmail.com",
   WHATSAPP_NUMBER: "61439695164",
+  /* Fill these in with your real plans/pricing and they'll show as cards on
+     the homepage Pricing section (and on an athlete's "payment required"
+     screen before they've paid). Leave the array empty to keep the current
+     generic "get in touch for pricing" message instead. */
+  PLANS: [
+    // { name: "Foundations", price: "$X/month", description: "For athletes building a consistent base." },
+    // { name: "Performance", price: "$X/month", description: "Structured training for a specific goal race." },
+  ],
   /* Drop your own files at these paths (same folder as index.html) and the
      hero will pick them up automatically — no code changes needed.
      HERO_IMAGE: a photo of Tom, portrait-ish crop works best (e.g. 1000x1250px).
@@ -646,11 +653,21 @@ const CONTACT_FIELDS = [
    athlete that the coach sets up once a plan is ready for them.
    ============================================================ */
 const SESSION_KEY = "rc_session_v1"; // { role: "coach"|"athlete", token, athleteId? }
+// "Stay logged in" (checked, default) persists the session in localStorage
+// so it survives closing the browser/tab, for up to the token's 30-day life.
+// Unchecked stores it in sessionStorage instead, so it's cleared the moment
+// the browser or tab closes, for anyone on a shared/public device.
 function getSession(){
-  try{ return JSON.parse(localStorage.getItem(SESSION_KEY)) || null; }catch(e){ return null; }
+  try{
+    return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || JSON.parse(localStorage.getItem(SESSION_KEY)) || null;
+  }catch(e){ return null; }
 }
-function setSession(s){ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
-function clearSession(){ localStorage.removeItem(SESSION_KEY); }
+function setSession(s, remember){
+  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(SESSION_KEY);
+  (remember===false ? sessionStorage : localStorage).setItem(SESSION_KEY, JSON.stringify(s));
+}
+function clearSession(){ localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem(SESSION_KEY); }
 function isCoach(){ const s=getSession(); return !!(s && s.role==="coach" && s.token); }
 function isAthlete(id){ const s=getSession(); return !!(s && s.role==="athlete" && s.token && (!id || s.athleteId===id)); }
 
@@ -742,6 +759,11 @@ function newAthlete(overrides){
     discoveryNotes: "",
     welcomeMessage: "", recentRacePerformance: "", currentWeeklyVolume: "",
     currentFocusAreas: [], goalA: "", goalB: "", goalC: "",
+    /* paymentStatus: "pending" (default for new self-serve signups — no
+       dashboard access until the coach marks them paid, or they redeem a
+       coach-issued access code for free/trial access), "active" (paid,
+       full access), or "comp" (free access via access code). */
+    paymentStatus: "pending", accessCode: "",
     /* plan.weeks: [{ id, weekNumber, startDate, coachFocus, sessions:[{
          id, day, type, distance, pace, description, warmup, main, cooldown,
          coachNotes, completed, actual:{distance,time,rpe,notes}
@@ -762,10 +784,15 @@ function newAthlete(overrides){
 /* Fills in any fields missing on athletes created before this data model
    existed, so older demo/local data doesn't break new UI. */
 function migrateAthlete(a){
+  // Grandfather in athletes that existed before payment gating was added —
+  // they shouldn't suddenly get locked out. New athletes get "pending" from
+  // newAthlete()/the server's public signup endpoints; only backfill here.
+  const hadNoPaymentStatus = a.paymentStatus === undefined;
   const blank = newAthlete({});
   for(const k of Object.keys(blank)){
     if(a[k] === undefined) a[k] = blank[k];
   }
+  if(hadNoPaymentStatus) a.paymentStatus = "active";
   if(!a.plan) a.plan = { paceZones:{}, weeks:[] };
   if(!a.plan.weeks) a.plan.weeks = [];
   if(!a.plan.paceZones) a.plan.paceZones = {};
@@ -1320,10 +1347,26 @@ function renderLanding(){
           <div class="eyebrow-label">Pricing</div>
           <h2>Built around your goals</h2>
         </div>
+        ${(CONFIG.PLANS||[]).length ? `
+        <div class="grid3" style="margin-bottom:18px;">
+          ${CONFIG.PLANS.map(p=>`
+            <div class="card" style="text-align:left;">
+              <h3 style="margin-bottom:2px;">${esc(p.name)}</h3>
+              <div class="muted" style="font-weight:600;margin-bottom:8px;">${esc(p.price)}</div>
+              ${p.description?`<p class="muted">${esc(p.description)}</p>`:""}
+            </div>
+          `).join("")}
+        </div>
+        <div class="pricing-box">
+          <p>Access unlocks once your plan and payment are set up — a code is available for trial/giveaway spots.</p>
+          <a class="btn btn-primary" href="#/contact">Get in touch</a>
+        </div>
+        ` : `
         <div class="pricing-box">
           <p>Every plan is personalised, so pricing depends on your goals and the level of support you need. Get in touch and we'll figure out what fits.</p>
           <a class="btn btn-primary" href="#/contact">Get in touch</a>
         </div>
+        `}
       </div>
     </section>
 
@@ -1339,7 +1382,7 @@ function renderLanding(){
 
     <section class="final-cta">
       <div class="container">
-        <h2>Ready To Start Your Running Journey?</h2>
+        <h2>Ready To Start Your Coaching Journey?</h2>
         <p>Whether your goal is a first 5K, a new PB, or completing your next race, let's build a plan that works for you.</p>
         <a class="btn btn-primary" href="#/questionnaire">Start Coaching Today</a>
       </div>
@@ -1627,6 +1670,9 @@ function renderAthleteLoginScreen(){
         <p class="muted">Log in with the email and password your coach set up for you.</p>
         <div class="field" style="text-align:left;"><label>Email</label><input type="email" id="alEmail"></div>
         <div class="field" style="text-align:left;"><label>Password</label><input type="password" id="alPassword"></div>
+        <label style="display:flex;align-items:center;gap:8px;text-align:left;font-size:.88rem;margin-top:4px;">
+          <input type="checkbox" id="alRemember" checked style="width:auto;"> Stay logged in on this device
+        </label>
         <button class="btn btn-primary btn-block" id="alSubmit" style="margin-top:8px;">Log in</button>
         <p style="margin-top:18px;"><a href="#/">← Back to site</a></p>
       </div>
@@ -1635,10 +1681,11 @@ function renderAthleteLoginScreen(){
   document.getElementById("alSubmit").addEventListener("click", async ()=>{
     const email = document.getElementById("alEmail").value.trim();
     const password = document.getElementById("alPassword").value;
+    const remember = document.getElementById("alRemember").checked;
     if(!email || !password){ toast("Fill in both fields"); return; }
     try{
       const result = await athleteLogin(email, password);
-      setSession({ role:"athlete", token: result.token, athleteId: result.athleteId });
+      setSession({ role:"athlete", token: result.token, athleteId: result.athleteId }, remember);
       location.hash = `#/athlete-view/${result.athleteId}/dashboard`;
     }catch(e){
       toast(e.message || "Login failed");
@@ -1910,6 +1957,20 @@ function tabOverview(a){
       <button class="btn btn-secondary btn-sm" id="ovSave">Save</button>
     </div>
     <div class="card" style="margin-bottom:16px;">
+      <h3>Payment</h3>
+      <p class="muted">Controls whether this athlete can see their dashboard and resources. New self-serve signups start Pending — nothing unlocks until you flip this, or they redeem an access code.</p>
+      <div class="field" style="max-width:280px;">
+        <label>Status</label>
+        <select id="ovPaymentStatus">
+          <option value="pending" ${a.paymentStatus==="pending"?"selected":""}>Pending — no dashboard access</option>
+          <option value="active" ${a.paymentStatus==="active"?"selected":""}>Active — paid, full access</option>
+          <option value="comp" ${a.paymentStatus==="comp"?"selected":""}>Comp — free/trial access</option>
+        </select>
+      </div>
+      ${a.accessCode ? `<p class="muted" style="margin-top:6px;">Redeemed access code: <strong>${esc(a.accessCode)}</strong></p>` : ""}
+      <button class="btn btn-secondary btn-sm" id="ovPaymentSave" style="margin-top:8px;">Save payment status</button>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
       <h3>Training block overview</h3>
       <p class="muted">Shows on the athlete's Dashboard tab in the app — this is the "welcome pack" content for this training block.</p>
       <div class="field"><label>Welcome message from you</label><textarea id="tbWelcome" rows="4" placeholder="The biggest focus of this training block is...">${esc(a.welcomeMessage)}</textarea></div>
@@ -2111,16 +2172,40 @@ function tabDiscovery(a){
     </div>
   `;
 }
-function tabPlan(a){
-  const zones = a.plan?.paceZones||{};
+// Pace zones used to be a fixed object {Easy, Marathon, Threshold, Interval,
+// Recovery}. Coaches wanted zone names they can rename or drop (not every
+// athlete needs a Threshold zone, some coaches use different terminology),
+// so this is now an editable array of {label, pace} rows. Old-format data
+// (a plain object) is transparently migrated to the array the first time
+// it's read.
+function normalizePaceZones(a){
+  const pz = a.plan && a.plan.paceZones;
+  if(Array.isArray(pz)) return pz;
   const zoneKeys = ["Easy","Marathon","Threshold","Interval","Recovery"];
+  if(pz && typeof pz==="object"){
+    const fromOld = zoneKeys.filter(k=>pz[k]).map(k=>({label:k, pace:pz[k]}));
+    return fromOld.length ? fromOld : zoneKeys.map(k=>({label:k, pace:""}));
+  }
+  return zoneKeys.map(k=>({label:k, pace:""}));
+}
+function tabPlan(a){
+  const zones = normalizePaceZones(a);
   const weeks = getWeeks(a);
   return `
     <div class="card" style="margin-bottom:16px;">
       <h3>Pace zones</h3>
-      <div class="grid2">
-        ${zoneKeys.map(z=>`<div class="field"><label>${z} pace</label><input type="text" data-zone="${z}" value="${esc(zones[z]||"")}" placeholder="e.g. 5:30/km"></div>`).join("")}
+      <p class="muted" style="font-size:.78rem;margin-top:-6px;">Rename or remove any zone your athlete doesn't need — only zones with a pace filled in show on their dashboard.</p>
+      <div id="paceZoneRows">
+        ${zones.map((z,zi)=>`
+          <div class="row-actions" data-zi="${zi}" style="margin-bottom:8px;align-items:flex-end;">
+            <div class="field" style="margin:0;flex:1;"><label style="font-size:.72rem;">Zone name</label><input type="text" class="zoneLabel" data-zi="${zi}" value="${esc(z.label)}" placeholder="e.g. Easy"></div>
+            <div class="field" style="margin:0;flex:1;"><label style="font-size:.72rem;">Pace</label><input type="text" class="zonePace" data-zi="${zi}" value="${esc(z.pace||"")}" placeholder="e.g. 5:30/km"></div>
+            <button class="btn btn-ghost btn-sm removeZone" data-zi="${zi}">Remove</button>
+          </div>
+        `).join("")}
       </div>
+      <button class="btn btn-ghost btn-sm" id="addZoneBtn" style="margin-bottom:10px;">+ Add zone</button>
+      <br>
       <button class="btn btn-secondary btn-sm" id="saveZones">Save pace zones</button>
     </div>
     <div class="toolbar">
@@ -2387,6 +2472,10 @@ function wireTab(tab, a){
       a.availability = document.getElementById("ovAvailability").value.trim();
       await dbPut(a); toast("Saved"); renderAthleteProfile(a);
     });
+    document.getElementById("ovPaymentSave").addEventListener("click", async ()=>{
+      a.paymentStatus = document.getElementById("ovPaymentStatus").value;
+      await dbPut(a); toast("Payment status saved"); renderAthleteProfile(a);
+    });
     document.getElementById("tbSave").addEventListener("click", async ()=>{
       a.welcomeMessage = document.getElementById("tbWelcome").value.trim();
       a.recentRacePerformance = document.getElementById("tbRecentRace").value.trim();
@@ -2446,11 +2535,32 @@ function wireTab(tab, a){
   }
   if(tab==="plan"){
     document.getElementById("saveZones").addEventListener("click", async ()=>{
-      const zones = {};
-      document.querySelectorAll("[data-zone]").forEach(inp=>{ zones[inp.dataset.zone] = inp.value.trim(); });
-      a.plan = a.plan || {weeks:[],paceZones:{}};
+      const rows = document.querySelectorAll("#paceZoneRows [data-zi]");
+      const zones = Array.from(rows).map(row=>{
+        const zi = row.dataset.zi;
+        const label = document.querySelector(`.zoneLabel[data-zi="${zi}"]`).value.trim();
+        const pace = document.querySelector(`.zonePace[data-zi="${zi}"]`).value.trim();
+        return { label, pace };
+      }).filter(z=>z.label);
+      a.plan = a.plan || {weeks:[],paceZones:[]};
       a.plan.paceZones = zones;
       await dbPut(a); toast("Pace zones saved");
+    });
+    document.getElementById("addZoneBtn").addEventListener("click", ()=>{
+      a.plan = a.plan || {weeks:[],paceZones:[]};
+      const zones = normalizePaceZones(a);
+      zones.push({label:"", pace:""});
+      a.plan.paceZones = zones;
+      renderTab(a);
+    });
+    document.querySelectorAll(".removeZone").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const zones = normalizePaceZones(a);
+        zones.splice(parseInt(btn.dataset.zi,10),1);
+        a.plan = a.plan || {weeks:[],paceZones:[]};
+        a.plan.paceZones = zones;
+        renderTab(a);
+      });
     });
     document.getElementById("addWeekBtn").addEventListener("click", async ()=>{
       a.plan = a.plan || {weeks:[],paceZones:{}};
@@ -2542,7 +2652,9 @@ function wireTab(tab, a){
 /* ============================================================
    SETTINGS
    ============================================================ */
-function renderSettings(){
+async function renderSettings(){
+  let accessCodes = [];
+  try{ accessCodes = (await apiFetch("/api/coach/settings")).accessCodes || []; }catch(e){ /* leave empty */ }
   root.innerHTML = `
     <div class="dash-shell">
       <div class="dash-top">
@@ -2579,6 +2691,32 @@ function renderSettings(){
             <div class="field"><label>Confirm new password</label><input type="password" id="confPw"></div>
             <button class="btn btn-secondary btn-sm" id="changePwBtn">Update password</button>
           </div>
+          <div class="card" style="margin-bottom:18px;">
+            <h3>Access codes</h3>
+            <p class="muted">Give an athlete one of these codes to unlock their dashboard for free without payment — handy for giveaways or trial runners. They enter it on their "payment required" screen.</p>
+            <div id="accessCodesList">
+              ${accessCodes.length ? `
+                <table class="simple">
+                  <tr><th>Code</th><th>Label</th><th>Uses</th><th>Status</th><th></th></tr>
+                  ${accessCodes.map((c,ci)=>`
+                    <tr>
+                      <td><strong>${esc(c.code)}</strong></td>
+                      <td>${esc(c.label||"—")}</td>
+                      <td>${c.usedCount||0}${c.maxUses?` / ${c.maxUses}`:" (unlimited)"}</td>
+                      <td>${c.active===false?"Inactive":"Active"}</td>
+                      <td><button class="btn btn-ghost btn-sm toggleCodeBtn" data-ci="${ci}">${c.active===false?"Activate":"Deactivate"}</button> <button class="btn btn-ghost btn-sm deleteCodeBtn" data-ci="${ci}">Delete</button></td>
+                    </tr>
+                  `).join("")}
+                </table>
+              ` : `<p class="muted">No access codes yet.</p>`}
+            </div>
+            <div class="grid2" style="margin-top:12px;">
+              <div class="field"><label>Code</label><input type="text" id="newCode" placeholder="e.g. WELCOME2026"></div>
+              <div class="field"><label>Label (optional)</label><input type="text" id="newCodeLabel" placeholder="e.g. Instagram giveaway"></div>
+              <div class="field"><label>Max uses (optional)</label><input type="number" id="newCodeMaxUses" min="1" placeholder="Leave blank for unlimited"></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="addCodeBtn">Add code</button>
+          </div>
           <div class="card">
             <h3>Backup</h3>
             <p class="muted">Export regularly as an extra safety net alongside the database's own backups.</p>
@@ -2606,6 +2744,35 @@ function renderSettings(){
     }catch(e){
       toast(e.message || "Couldn't update email");
     }
+  });
+  async function saveAccessCodes(codes){
+    await apiFetch("/api/coach/settings", { method:"PUT", body: JSON.stringify({ accessCodes: codes }) });
+    renderSettings();
+  }
+  document.getElementById("addCodeBtn").addEventListener("click", async ()=>{
+    const code = document.getElementById("newCode").value.trim();
+    if(!code){ toast("Enter a code"); return; }
+    const label = document.getElementById("newCodeLabel").value.trim();
+    const maxUsesRaw = document.getElementById("newCodeMaxUses").value;
+    const maxUses = maxUsesRaw ? parseInt(maxUsesRaw,10) : 0;
+    const codes = [...accessCodes, { code, label, maxUses, usedCount:0, active:true }];
+    await saveAccessCodes(codes);
+    toast("Access code added");
+  });
+  document.querySelectorAll(".toggleCodeBtn").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const ci = parseInt(btn.dataset.ci,10);
+      const codes = accessCodes.map((c,i)=> i===ci ? {...c, active: c.active===false} : c);
+      await saveAccessCodes(codes);
+    });
+  });
+  document.querySelectorAll(".deleteCodeBtn").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const ci = parseInt(btn.dataset.ci,10);
+      const codes = accessCodes.filter((c,i)=>i!==ci);
+      await saveAccessCodes(codes);
+      toast("Access code removed");
+    });
   });
   document.getElementById("changePwBtn").addEventListener("click", async ()=>{
     const current = document.getElementById("curPw").value;
@@ -2791,7 +2958,53 @@ async function renderAthleteView(athleteId, tab){
       location.hash = "#/login";
     });
   }
+  // Payment gate: a real athlete (not the coach previewing) whose payment
+  // status isn't active/comp gets a locked screen instead of any tab —
+  // the coach can still preview the real dashboard regardless.
+  const isPaid = athlete.paymentStatus==="active" || athlete.paymentStatus==="comp";
+  if(!preview && !isPaid){
+    const content = document.getElementById("athleteTabContent");
+    content.innerHTML = renderPaymentGate(athlete);
+    wirePaymentGate(athlete);
+    return;
+  }
   renderAthleteTabContent(athlete, tab);
+}
+
+function renderPaymentGate(a){
+  return `
+    <div class="card" style="max-width:480px;margin:20px auto;text-align:center;">
+      <h2 style="margin-bottom:6px;">Almost there, ${esc(firstName(a.name))}!</h2>
+      <p class="muted">Your dashboard, training plan, and resources unlock once your coaching payment is set up. Reach out to ${esc(CONFIG.COACH_FIRST)} to sort payment, or enter an access code below if you have one.</p>
+      ${(CONFIG.PLANS||[]).length ? `
+        <div style="text-align:left;margin:18px 0;">
+          <h3 style="font-size:1rem;">Available plans</h3>
+          ${CONFIG.PLANS.map(p=>`
+            <div class="list-item" style="margin-bottom:8px;">
+              <strong>${esc(p.name)}</strong> — ${esc(p.price)}
+              ${p.description?`<div class="muted">${esc(p.description)}</div>`:""}
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+      <a class="btn btn-primary btn-block" href="mailto:${esc(CONFIG.CONTACT_EMAIL)}" style="margin-bottom:14px;">Email ${esc(CONFIG.COACH_FIRST)} about payment</a>
+      <div class="field" style="text-align:left;"><label>Have an access code?</label><input type="text" id="pgCode" placeholder="Enter code"></div>
+      <button class="btn btn-secondary btn-block" id="pgRedeem">Unlock with code</button>
+    </div>
+  `;
+}
+function wirePaymentGate(a){
+  document.getElementById("pgRedeem").addEventListener("click", async ()=>{
+    const code = document.getElementById("pgCode").value.trim();
+    if(!code){ toast("Enter a code"); return; }
+    try{
+      await apiFetch(`/api/athletes/${a.id}/redeem-code`, { method:"POST", body: JSON.stringify({ code }) });
+      toast("Unlocked! Welcome aboard 🎉");
+      await renderAthleteView(a.id, "dashboard");
+    }catch(e){
+      toast(e.message || "That code didn't work");
+    }
+  });
 }
 
 function avDashboard(a){
@@ -2802,6 +3015,10 @@ function avDashboard(a){
   const month = computeMonthStats(a);
   const achievements = computeAchievements(a);
   const nextSession = week ? (week.sessions||[]).find(s=>!s.completed) : null;
+  const nextSessionDate = week && nextSession ? sessionDateISO(week, nextSession) : null;
+  const todayISO = toLocalISODate(new Date());
+  const isNextSessionToday = nextSessionDate === todayISO;
+  const weekStartsInFuture = week && week.startDate ? week.startDate > todayISO : false;
   const lastMsg = (a.messages||[])[a.messages.length-1];
 
   let racePrepPct = null;
@@ -2846,26 +3063,27 @@ function avDashboard(a){
       ${a.goalC ? `<div style="font-size:.9rem;"><strong>C Goal:</strong> ${esc(a.goalC)}</div>` : ""}
     </div>` : ""}
 
-    ${Object.values(a.plan?.paceZones||{}).some(v=>v) ? `
+    ${normalizePaceZones(a).some(z=>z.pace) ? `
     <div class="card">
       <h3>Pace guide</h3>
       <table class="simple">
-        ${Object.entries(a.plan.paceZones).filter(([,v])=>v).map(([k,v])=>`<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}
+        ${normalizePaceZones(a).filter(z=>z.pace).map(z=>`<tr><th>${esc(z.label)}</th><td>${esc(z.pace)}</td></tr>`).join("")}
       </table>
     </div>` : ""}
 
     <div class="card av-next-workout">
-      <h3 style="margin-bottom:4px;">Today's Session</h3>
+      <h3 style="margin-bottom:4px;">${isNextSessionToday ? "Today's Session" : "Next Session"}</h3>
       ${nextSession ? `
         <div class="av-session-title">${esc(nextSession.type)}</div>
-        <div class="muted">${nextSession.distance?esc(nextSession.distance)+"km":""}${nextSession.pace?" · "+esc(nextSession.pace):""}</div>
+        <div class="muted">${nextSessionDate ? fmtDate(nextSessionDate)+" · " : ""}${nextSession.distance?esc(nextSession.distance)+"km":""}${nextSession.pace?" · "+esc(nextSession.pace):""}</div>
         <button class="btn btn-primary btn-sm" style="margin-top:10px;" id="viewNextWorkoutBtn">View Workout</button>
       ` : `<p class="muted">${week ? "All sessions complete for this week 🎉" : "No plan set up yet — check back once your coach has built your training block."}</p>`}
     </div>
 
     <div class="card">
-      <h3>This Week</h3>
+      <h3>${weekStartsInFuture ? "Upcoming Week" : "This Week"}</h3>
       ${week ? `
+        ${weekStartsInFuture ? `<div class="muted" style="margin-bottom:6px;">Starts ${fmtDate(week.startDate)}</div>` : ""}
         <div class="muted">Sessions Completed: ${progress.completed}/${progress.total}</div>
         <div class="muted">Distance: ${progress.distanceCompleted}km / ${progress.distanceTotal}km</div>
         <div class="muted">Long Run: ${progress.longRunDone? "Completed ✅" : "Not yet"}</div>
