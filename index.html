@@ -2541,6 +2541,13 @@ function renderSettings(){
             </table>
           </div>
           <div class="card" style="margin-bottom:18px;">
+            <h3>Change login email</h3>
+            <p class="muted">The email you sign into the coach dashboard with. Requires your current password to confirm it's you.</p>
+            <div class="field"><label>New login email</label><input type="email" id="newEmail"></div>
+            <div class="field"><label>Current password</label><input type="password" id="emailCurPw"></div>
+            <button class="btn btn-secondary btn-sm" id="changeEmailBtn">Update email</button>
+          </div>
+          <div class="card" style="margin-bottom:18px;">
             <h3>Change password</h3>
             <p class="muted">Your coach account login — this is what you use to sign into the dashboard from any device now.</p>
             <div class="field"><label>Current password</label><input type="password" id="curPw"></div>
@@ -2562,6 +2569,20 @@ function renderSettings(){
     </div>
   `;
   document.getElementById("coachLogoutLink").addEventListener("click", ()=>{ clearSession(); location.hash="#/"; });
+  document.getElementById("changeEmailBtn").addEventListener("click", async ()=>{
+    const newEmail = document.getElementById("newEmail").value.trim();
+    const currentPassword = document.getElementById("emailCurPw").value;
+    if(!newEmail || !newEmail.includes("@")){ toast("Enter a valid email"); return; }
+    if(!currentPassword){ toast("Enter your current password to confirm"); return; }
+    try{
+      await apiFetch("/api/coach/email", { method:"PUT", body: JSON.stringify({ currentPassword, newEmail }) });
+      toast("Login email updated — use it next time you sign in");
+      document.getElementById("newEmail").value = "";
+      document.getElementById("emailCurPw").value = "";
+    }catch(e){
+      toast(e.message || "Couldn't update email");
+    }
+  });
   document.getElementById("changePwBtn").addEventListener("click", async ()=>{
     const current = document.getElementById("curPw").value;
     const next = document.getElementById("newPw").value;
