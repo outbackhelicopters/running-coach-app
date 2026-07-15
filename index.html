@@ -706,11 +706,6 @@ async function apiPatchSession(athleteId, weekId, sessionId, completed, actual){
     method:"PATCH", body: JSON.stringify({ weekId, sessionId, completed, actual })
   });
 }
-async function apiPatchCurrentWeek(athleteId, weekIndex){
-  return apiFetch(`/api/athletes/${encodeURIComponent(athleteId)}/current-week`, {
-    method:"PATCH", body: JSON.stringify({ weekIndex })
-  });
-}
 async function getResources(){ return apiFetch("/api/resources"); }
 async function addResource(r){ return apiFetch("/api/resources", { method:"POST", body: JSON.stringify(r) }); }
 async function deleteResource(id){ return apiFetch(`/api/resources/${encodeURIComponent(id)}`, { method:"DELETE" }); }
@@ -745,6 +740,8 @@ function newAthlete(overrides){
     inquiry: {},
     questionnaire: {},
     discoveryNotes: "",
+    welcomeMessage: "", recentRacePerformance: "", currentWeeklyVolume: "",
+    currentFocusAreas: [], goalA: "", goalB: "", goalC: "",
     /* plan.weeks: [{ id, weekNumber, startDate, coachFocus, sessions:[{
          id, day, type, distance, pace, description, warmup, main, cooldown,
          coachNotes, completed, actual:{distance,time,rpe,notes}
@@ -862,6 +859,20 @@ function getCurrentWeek(a){
   const weeks = getWeeks(a);
   if(!weeks.length) return null;
   const idx = Math.min(Math.max(a.currentWeekIndex||0,0), weeks.length-1);
+  return weeks[idx];
+}
+// The week an athlete is currently LOOKING at in the Training tab. This is
+// deliberately separate from a.currentWeekIndex (the coach's official
+// "current" week, used for streak calc, the coach's own dashboard stats,
+// and the "Current" tag in Plan Builder). Browsing forward/back to preview
+// a different week must never overwrite that shared, persisted value —
+// it's local-only and resets whenever the athlete navigates to the tab
+// fresh (see _avWeekIndex reset in renderAthleteView).
+function getViewedWeek(a){
+  const weeks = getWeeks(a);
+  if(!weeks.length) return null;
+  const want = _avWeekIndex!=null ? _avWeekIndex : (a.currentWeekIndex||0);
+  const idx = Math.min(Math.max(want,0), weeks.length-1);
   return weeks[idx];
 }
 function weekProgress(week){
@@ -1095,12 +1106,21 @@ function computeReminders(athletes){
     if(!lastCheckin || (now-lastCheckin) > 7*86400000){
       reminders.push({ type:"Weekly check-in", athlete:a, dueText: lastCheckin ? `last check-in ${Math.floor((now-lastCheckin)/86400000)}d ago` : "no check-in logged yet" });
     }
+    // Monthly catch-up reminder — must keep re-firing every ~30 days, not
+    // just once ever. Reviews only carry a free-text "month" label (e.g.
+    // "July 2026"), not a real date, so recency is tracked via a separate
+    // createdAt timestamp stamped on each review when it's logged (see the
+    // addReview handler in wireTab). Older reviews logged before that field
+    // existed won't have one — those are treated as "unknown age" rather
+    // than triggering a false "never reviewed" reminder.
     const reviews = a.reviews||[];
-    const lastReview = reviews.length ? reviews.length : 0;
     if(a.startDate){
       const daysCoaching = Math.floor((now-new Date(a.startDate+"T00:00:00").getTime())/86400000);
-      if(daysCoaching>=27 && reviews.length===0){
-        reminders.push({ type:"Monthly catch-up", athlete:a, dueText: `coaching ${daysCoaching}d, no review logged yet` });
+      const lastReviewAt = reviews.reduce((max,r)=> r.createdAt && r.createdAt>max ? r.createdAt : max, 0);
+      const daysSinceReview = lastReviewAt ? Math.floor((now-lastReviewAt)/86400000) : null;
+      const overdue = reviews.length===0 || (daysSinceReview!=null && daysSinceReview>=30);
+      if(daysCoaching>=27 && overdue){
+        reminders.push({ type:"Monthly catch-up", athlete:a, dueText: reviews.length===0 ? `coaching ${daysCoaching}d, no review logged yet` : `last review ${daysSinceReview}d ago` });
       }
     }
   });
@@ -1777,6 +1797,10 @@ function openAddAthleteModal(){
    ATHLETE PROFILE
    ============================================================ */
 let _activeTab = "overview";
+// Which week the athlete is currently browsing to in their own Training
+// tab — local UI state only, never persisted. null means "show whatever
+// week the coach has marked current" (see getViewedWeek).
+let _avWeekIndex = null;
 async function renderAthleteProfile(athlete, params){
   if(params && params.strava){
     const msgs = { connected:"Strava connected 🎉", denied:"Strava connection was cancelled.", error:"Something went wrong connecting Strava — try again." };
@@ -2497,7 +2521,7 @@ function wireTab(tab, a){
       const notes = document.getElementById("rvNotes").value.trim();
       if(!month || !notes){ toast("Fill in month and notes"); return; }
       a.reviews = a.reviews||[];
-      a.reviews.push({month,notes});
+      a.reviews.push({month,notes,createdAt:Date.now()});
       await dbPut(a); toast("Review logged"); renderTab(a);
     });
   }
@@ -2717,14 +2741,14 @@ function openResourceModal(){
 }
 
 /* ============================================================
-   ATHLETE DASHBOARD (athlete-facing preview)
-   Note: this app stores all data in the coach's own browser
-   (IndexedDB), so there's no real athlete login/backend yet —
-   this view is a preview the coach opens to see (and demo) what
-   an athlete would see. Wiring up real per-athlete accounts would
-   need a small backend, same as Strava did.
+   ATHLETE DASHBOARD (real athlete-facing view)
+   Real per-athlete accounts, backed by the same Postgres database
+   as everything else (see server/). The coach can also open this
+   same view read-write via "View as Athlete" — see the `preview`
+   flag in renderAthleteView, which just swaps the header/logout
+   button; the rendered content is identical either way.
    ============================================================ */
-const AV_RENDERERS = { dashboard: avDashboard, training: avTraining, progress: avProgress, messages: avMessages, profile: avProfile };
+const AV_RENDERERS = { dashboard: avDashboard, training: avTraining, progress: avProgress, messages: avMessages, resources: avResources, profile: avProfile };
 function renderAthleteTabContent(a, tab){
   const content = document.getElementById("athleteTabContent");
   if(!content) return;
@@ -2738,6 +2762,10 @@ async function renderAthleteView(athleteId, tab){
     return;
   }
   tab = tab || "dashboard";
+  // Fresh navigation into the athlete view (including switching bottom-nav
+  // tabs, which are real links) always resets to the coach's actual
+  // current week — any in-tab browsing from a previous visit doesn't stick.
+  _avWeekIndex = null;
   const preview = isCoach();
   root.innerHTML = `
     <div class="dash-shell athlete-view">
@@ -2751,7 +2779,7 @@ async function renderAthleteView(athleteId, tab){
         <div id="athleteTabContent"></div>
       </div>
       <div class="bottom-nav">
-        ${["dashboard","training","progress","messages","profile"].map(t=>`
+        ${["dashboard","training","progress","messages","resources","profile"].map(t=>`
           <a class="bottom-nav-item ${tab===t?'active':''}" href="#/athlete-view/${athlete.id}/${t}">${t.charAt(0).toUpperCase()+t.slice(1)}</a>
         `).join("")}
       </div>
@@ -2875,7 +2903,8 @@ function avDashboard(a){
 
 function avTraining(a){
   const weeks = getWeeks(a);
-  const idx = Math.min(Math.max(a.currentWeekIndex||0,0), Math.max(weeks.length-1,0));
+  const want = _avWeekIndex!=null ? _avWeekIndex : (a.currentWeekIndex||0);
+  const idx = Math.min(Math.max(want,0), Math.max(weeks.length-1,0));
   const week = weeks[idx];
   const progress = weekProgress(week);
   const celebrate = week && progress.total>0 && progress.completed===progress.total;
@@ -2932,7 +2961,7 @@ function avTraining(a){
 }
 
 function openCompleteSessionModal(a, si){
-  const week = getCurrentWeek(a);
+  const week = getViewedWeek(a);
   const s = week.sessions[si];
   const wrap = document.createElement("div");
   wrap.className = "modal-backdrop";
@@ -3027,6 +3056,35 @@ function avMessages(a){
   `;
 }
 
+// The coach's shared Content Library (warm-ups, pace guides, race prep,
+// recovery tips) — read-only here. Loaded async (same pattern as the
+// Strava boxes) since AV_RENDERERS entries return synchronous HTML.
+function avResources(a){
+  return `
+    <div class="card">
+      <h3>Resources</h3>
+      <p class="muted">Shared by ${esc(CONFIG.COACH_FIRST)} — warm-ups, pace guides, race prep, recovery tips.</p>
+      <div id="avResourcesBox"><p class="muted">Loading…</p></div>
+    </div>
+  `;
+}
+async function loadAvResources(){
+  const box = document.getElementById("avResourcesBox");
+  if(!box) return;
+  try{
+    const resources = await getResources();
+    box.innerHTML = resources.length ? resources.map(r=>`
+      <div class="list-item">
+        <div class="meta">${esc(r.category||"General")}</div>
+        <strong>${esc(r.title)}</strong>
+        ${r.body?`<div class="muted" style="white-space:pre-wrap;">${esc(r.body)}</div>`:""}
+        ${r.link?`<div><a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(r.link)}</a></div>`:""}
+      </div>
+    `).join("") : `<p class="muted">Nothing shared yet — check back soon.</p>`;
+  }catch(e){
+    box.innerHTML = `<p class="muted">Couldn't load resources right now.</p>`;
+  }
+}
 function avProfile(a){
   return `
     <div class="card">
@@ -3047,6 +3105,9 @@ function avProfile(a){
 }
 
 function wireAthleteView(tab, a){
+  if(tab==="resources"){
+    loadAvResources();
+  }
   if(tab==="dashboard"){
     const btn = document.getElementById("viewNextWorkoutBtn");
     if(btn) btn.addEventListener("click", ()=>{ location.hash = `#/athlete-view/${a.id}/training`; });
@@ -3068,26 +3129,31 @@ function wireAthleteView(tab, a){
     document.querySelectorAll(".avAddSessionCal").forEach(btn=>{
       btn.addEventListener("click", (e)=>{
         e.stopPropagation();
-        const week = getCurrentWeek(a);
+        const week = getViewedWeek(a);
         const session = week && week.sessions[parseInt(btn.dataset.si,10)];
         if(session) addSessionToCalendar(a, week, session);
       });
     });
     const weekCalBtn = document.getElementById("avAddWeekCal");
     if(weekCalBtn) weekCalBtn.addEventListener("click", ()=>{
-      const week = getCurrentWeek(a);
+      const week = getViewedWeek(a);
       if(week) addWeekToCalendar(a, week);
     });
     const prevBtn = document.getElementById("avPrevWeek");
     const nextBtn = document.getElementById("avNextWeek");
     const sel = document.getElementById("avWeekSelect");
-    async function goToWeek(idx){
-      a.currentWeekIndex = idx;
+    // Browsing to a different week here is local-only — it just changes
+    // what this tab is showing right now. It must NOT touch a.currentWeekIndex
+    // (that's the coach's own "current week" designation, which their
+    // dashboard stats and Plan Builder "Current" tag rely on) and must NOT
+    // be persisted to the server. See getViewedWeek / _avWeekIndex.
+    function goToWeek(idx){
+      _avWeekIndex = idx;
       renderAthleteTabContent(a, "training");
-      try{ await apiPatchCurrentWeek(a.id, idx); }catch(e){ /* view already updated; not worth blocking on */ }
     }
-    if(prevBtn) prevBtn.addEventListener("click", ()=>goToWeek(Math.max(0,(a.currentWeekIndex||0)-1)));
-    if(nextBtn) nextBtn.addEventListener("click", ()=>goToWeek(Math.min(getWeeks(a).length-1,(a.currentWeekIndex||0)+1)));
+    const curIdx = _avWeekIndex!=null ? _avWeekIndex : (a.currentWeekIndex||0);
+    if(prevBtn) prevBtn.addEventListener("click", ()=>goToWeek(Math.max(0,curIdx-1)));
+    if(nextBtn) nextBtn.addEventListener("click", ()=>goToWeek(Math.min(getWeeks(a).length-1,curIdx+1)));
     if(sel) sel.addEventListener("change", ()=>goToWeek(parseInt(sel.value,10)));
   }
 }
