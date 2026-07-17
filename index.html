@@ -277,6 +277,10 @@
   @media(max-width:720px){.grid2{grid-template-columns:1fr;}}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
   @media(max-width:900px){.grid3{grid-template-columns:1fr;}}
+  .region-toggle{display:flex;gap:8px;justify-content:center;margin-bottom:18px;flex-wrap:wrap;}
+  .region-btn{padding:8px 18px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:600;cursor:pointer;font-size:.88rem;}
+  .region-btn.active{background:var(--rust);color:#fff;border-color:var(--rust);}
+  .pricing-card-featured{border:2px solid var(--rust);}
 
   /* App Preview section — stylised, illustrative mockups (not real
      screenshots/data) of the athlete dashboard, calendar, and progress
@@ -477,14 +481,32 @@ const CONFIG = {
   FORMSPREE_ENDPOINT: "",
   CONTACT_EMAIL: "tommcgookincoaching@gmail.com",
   WHATSAPP_NUMBER: "61439695164",
-  /* Fill these in with your real plans/pricing and they'll show as cards on
-     the homepage Pricing section (and on an athlete's "payment required"
-     screen before they've paid). Leave the array empty to keep the current
-     generic "get in touch for pricing" message instead. */
-  PLANS: [
-    // { name: "Foundations", price: "$X/month", description: "For athletes building a consistent base." },
-    // { name: "Performance", price: "$X/month", description: "Structured training for a specific goal race." },
-  ],
+  /* Display-only mirror of server/plans.js — the server is always the
+     source of truth for what actually gets charged, this just controls
+     what shows on the homepage Pricing section and the athlete "payment
+     required" screen. Edit names/descriptions freely; if you ever change
+     an actual price, update BOTH here and server/plans.js so they match,
+     or athletes will see one number and get charged another. */
+  PLANS_BY_REGION: {
+    AU: {
+      label: "Australia", flag: "🇦🇺",
+      plans: [
+        { id: "marathon", name: "One-off Marathon Plan", priceLabel: "A$80.00 one-time", description: "A single personalised marathon training plan, delivered digitally." },
+        { id: "half", name: "One-off Half Marathon Plan", priceLabel: "A$65.00 one-time", description: "A single personalised half marathon training plan, delivered digitally." },
+        { id: "fiveK", name: "One-off 5K Plan", priceLabel: "A$45.00 one-time", description: "A single personalised 5K training plan, delivered digitally." },
+        { id: "premiumSub", name: "Premium Personalised Plan", priceLabel: "A$30.00 every 2 weeks", description: "App access, personalised training plan, check-ins, plan adjustments, coaching and race day support.", featured: true, oneOffId: "premiumOnce", oneOffLabel: "A$250.00 one-time" },
+      ],
+    },
+    UK: {
+      label: "United Kingdom", flag: "🇬🇧",
+      plans: [
+        { id: "marathon", name: "One-off Marathon Plan", priceLabel: "£45.00 one-time", description: "A single personalised marathon training plan, delivered digitally." },
+        { id: "half", name: "One-off Half Marathon Plan", priceLabel: "£30.00 one-time", description: "A single personalised half marathon training plan, delivered digitally." },
+        { id: "fiveK", name: "One-off 5K Plan", priceLabel: "£20.00 one-time", description: "A single personalised 5K training plan, delivered digitally." },
+        { id: "premiumSub", name: "Premium Personalised Plan", priceLabel: "£29.00 per month", description: "App access, personalised training plan, check-ins, plan adjustments, coaching and race day support.", featured: true, oneOffId: "premiumOnce", oneOffLabel: "£125.00 one-time" },
+      ],
+    },
+  },
   /* Drop your own files at these paths (same folder as index.html) and the
      hero will pick them up automatically — no code changes needed.
      HERO_IMAGE: a photo of Tom, portrait-ish crop works best (e.g. 1000x1250px).
@@ -752,6 +774,20 @@ async function apiPatchSession(athleteId, weekId, sessionId, completed, actual){
   return apiFetch(`/api/athletes/${encodeURIComponent(athleteId)}/session`, {
     method:"PATCH", body: JSON.stringify({ weekId, sessionId, completed, actual })
   });
+}
+// Starts a Stripe Checkout session for the given region/plan and sends the
+// browser there. athleteId is only passed when a logged-in athlete is
+// paying to unlock their own dashboard (see renderPaymentGate) — anonymous
+// homepage purchases pass null and become a new lead once payment lands.
+async function startCheckout(region, planId, athleteId){
+  try{
+    const body = { region, planId };
+    if(athleteId) body.athleteId = athleteId;
+    const res = await apiFetch("/api/checkout/create-session", { method:"POST", body: JSON.stringify(body) });
+    if(res && res.url) location.href = res.url;
+  }catch(e){
+    toast(e.message || "Couldn't start checkout — try again shortly");
+  }
 }
 async function getResources(){ return apiFetch("/api/resources"); }
 async function addResource(r){ return apiFetch("/api/resources", { method:"POST", body: JSON.stringify(r) }); }
@@ -1206,6 +1242,8 @@ async function render(){
     return renderAthleteViewGate(parts[1], parts[2]||"dashboard");
   }
   if(path === "/login") return renderAthleteLoginScreen();
+  if(path === "/payment-success") return renderPaymentResult(true);
+  if(path === "/payment-cancelled") return renderPaymentResult(false);
   root.innerHTML = `<div class="container" style="padding:60px 0"><h2>Not found</h2><a href="#/">Back home</a></div>`;
 }
 
@@ -1253,6 +1291,23 @@ function siteFooter(){
       <div class="copyright">© ${new Date().getFullYear()} ${esc(CONFIG.BUSINESS_NAME)}</div>
     </div>
   </footer>`;
+}
+
+function renderPaymentResult(success){
+  root.innerHTML = `
+    ${siteHeader()}
+    <div class="container" style="padding:80px 0;text-align:center;max-width:520px;">
+      <h1>${success ? "Payment received 🎉" : "Checkout cancelled"}</h1>
+      <p class="muted">${success
+        ? "Thanks — we've got it. If this was for dashboard access, log in and it'll be unlocked within a few seconds."
+        : "No charge was made. You can try again any time."}</p>
+      <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <a class="btn btn-primary" href="#/login">Athlete login</a>
+        <a class="btn btn-ghost" href="#/">Back home</a>
+      </div>
+    </div>
+    ${siteFooter()}
+  `;
 }
 
 /* ============================================================
@@ -1437,26 +1492,31 @@ function renderLanding(){
           <div class="eyebrow-label">Pricing</div>
           <h2>Built around your goals</h2>
         </div>
-        ${(CONFIG.PLANS||[]).length ? `
-        <div class="grid3" style="margin-bottom:18px;">
-          ${CONFIG.PLANS.map(p=>`
-            <div class="card" style="text-align:left;">
-              <h3 style="margin-bottom:2px;">${esc(p.name)}</h3>
-              <div class="muted" style="font-weight:600;margin-bottom:8px;">${esc(p.price)}</div>
-              ${p.description?`<p class="muted">${esc(p.description)}</p>`:""}
-            </div>
+        <div class="region-toggle">
+          ${Object.keys(CONFIG.PLANS_BY_REGION).map((region,i)=>`
+            <button type="button" class="region-btn ${i===0?'active':''}" data-region-btn="${region}">${CONFIG.PLANS_BY_REGION[region].flag} ${esc(CONFIG.PLANS_BY_REGION[region].label)}</button>
           `).join("")}
         </div>
+        ${Object.keys(CONFIG.PLANS_BY_REGION).map((region,i)=>`
+          <div class="region-plans" data-region="${region}" style="${i===0?"":"display:none;"}">
+            <div class="grid3" style="margin-bottom:18px;">
+              ${CONFIG.PLANS_BY_REGION[region].plans.map(p=>`
+                <div class="card pricing-card ${p.featured?'pricing-card-featured':''}" style="text-align:left;">
+                  ${p.featured?'<div class="tag" style="margin-bottom:8px;">Most popular</div>':''}
+                  <h3 style="margin-bottom:2px;">${esc(p.name)}</h3>
+                  <div class="muted" style="font-weight:600;margin-bottom:8px;">${esc(p.priceLabel)}</div>
+                  ${p.description?`<p class="muted">${esc(p.description)}</p>`:""}
+                  <button type="button" class="btn btn-primary btn-sm buyPlanBtn" style="margin-top:10px;width:100%;" data-region="${region}" data-plan="${p.id}">${p.id==="premiumSub"?"Subscribe":"Buy plan"}</button>
+                  ${p.oneOffId ? `<button type="button" class="btn btn-ghost btn-sm buyPlanBtn" style="margin-top:6px;width:100%;" data-region="${region}" data-plan="${p.oneOffId}">Or pay once — ${esc(p.oneOffLabel)}</button>` : ""}
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `).join("")}
         <div class="pricing-box">
-          <p>Access unlocks once your plan and payment are set up — a code is available for trial/giveaway spots.</p>
-          <a class="btn btn-primary" href="#/contact">Get in touch</a>
+          <p>Access to the app unlocks once your Premium Personalised Plan payment is confirmed — a code is available for trial/giveaway spots.</p>
+          <a class="btn btn-ghost" href="#/contact">Questions? Get in touch</a>
         </div>
-        ` : `
-        <div class="pricing-box">
-          <p>Every plan is personalised, so pricing depends on your goals and the level of support you need. Get in touch and we'll figure out what fits.</p>
-          <a class="btn btn-primary" href="#/contact">Get in touch</a>
-        </div>
-        `}
       </div>
     </section>
 
@@ -1482,6 +1542,27 @@ function renderLanding(){
   `;
   wireHeroMedia();
   wireFaq();
+  wirePricing();
+}
+
+// Region toggle (AU/UK) + "Buy plan"/"Subscribe" buttons on the homepage
+// Pricing section. Anonymous visitors have no athleteId yet — the webhook
+// creates a new lead once their payment lands (see server/index.js).
+function wirePricing(){
+  document.querySelectorAll(".region-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const region = btn.getAttribute("data-region-btn");
+      document.querySelectorAll(".region-btn").forEach(b=>b.classList.toggle("active", b===btn));
+      document.querySelectorAll(".region-plans").forEach(el=>{
+        el.style.display = el.getAttribute("data-region")===region ? "" : "none";
+      });
+    });
+  });
+  document.querySelectorAll(".buyPlanBtn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      startCheckout(btn.getAttribute("data-region"), btn.getAttribute("data-plan"), null);
+    });
+  });
 }
 
 function wireHeroMedia(){
@@ -3062,28 +3143,52 @@ async function renderAthleteView(athleteId, tab){
 }
 
 function renderPaymentGate(a){
+  const savedRegion = (a.stripe && a.stripe.region) || "AU";
+  const regionCardsHtml = Object.keys(CONFIG.PLANS_BY_REGION).map(region=>{
+    const rc = CONFIG.PLANS_BY_REGION[region];
+    const premium = rc.plans.find(p=>p.id==="premiumSub");
+    if(!premium) return "";
+    return `
+    <div class="pg-region-plan" data-region="${region}" style="${region===savedRegion?"":"display:none;"}">
+      <div class="list-item" style="margin-bottom:8px;">
+        <strong>${esc(premium.name)}</strong> — ${esc(premium.priceLabel)}
+        ${premium.description?`<div class="muted">${esc(premium.description)}</div>`:""}
+      </div>
+      <button type="button" class="btn btn-primary btn-block pgBuyBtn" data-region="${region}" data-plan="${premium.id}" style="margin-bottom:8px;">Subscribe — ${esc(premium.priceLabel)}</button>
+      ${premium.oneOffId ? `<button type="button" class="btn btn-secondary btn-block pgBuyBtn" data-region="${region}" data-plan="${premium.oneOffId}" style="margin-bottom:8px;">Pay once — ${esc(premium.oneOffLabel)}</button>` : ""}
+    </div>`;
+  }).join("");
   return `
     <div class="card" style="max-width:480px;margin:20px auto;text-align:center;">
       <h2 style="margin-bottom:6px;">Almost there, ${esc(firstName(a.name))}!</h2>
-      <p class="muted">Your dashboard, training plan, and resources unlock once your coaching payment is set up. Reach out to ${esc(CONFIG.COACH_FIRST)} to sort payment, or enter an access code below if you have one.</p>
-      ${(CONFIG.PLANS||[]).length ? `
-        <div style="text-align:left;margin:18px 0;">
-          <h3 style="font-size:1rem;">Available plans</h3>
-          ${CONFIG.PLANS.map(p=>`
-            <div class="list-item" style="margin-bottom:8px;">
-              <strong>${esc(p.name)}</strong> — ${esc(p.price)}
-              ${p.description?`<div class="muted">${esc(p.description)}</div>`:""}
-            </div>
-          `).join("")}
-        </div>
-      ` : ""}
-      <a class="btn btn-primary btn-block" href="mailto:${esc(CONFIG.CONTACT_EMAIL)}" style="margin-bottom:14px;">Email ${esc(CONFIG.COACH_FIRST)} about payment</a>
+      <p class="muted">Your dashboard, training plan, and resources unlock once your coaching payment is set up. Pay securely below, or enter an access code if you have one.</p>
+      <div class="region-toggle" style="margin:14px 0;">
+        ${Object.keys(CONFIG.PLANS_BY_REGION).map(region=>`
+          <button type="button" class="region-btn pgRegionBtn ${region===savedRegion?"active":""}" data-region-btn="${region}">${CONFIG.PLANS_BY_REGION[region].flag} ${esc(CONFIG.PLANS_BY_REGION[region].label)}</button>
+        `).join("")}
+      </div>
+      <div style="text-align:left;margin:18px 0;">${regionCardsHtml}</div>
+      <a class="btn btn-ghost btn-block" href="mailto:${esc(CONFIG.CONTACT_EMAIL)}" style="margin-bottom:14px;">Or email ${esc(CONFIG.COACH_FIRST)} about payment</a>
       <div class="field" style="text-align:left;"><label>Have an access code?</label><input type="text" id="pgCode" placeholder="Enter code"></div>
       <button class="btn btn-secondary btn-block" id="pgRedeem">Unlock with code</button>
     </div>
   `;
 }
 function wirePaymentGate(a){
+  document.querySelectorAll(".pgRegionBtn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const region = btn.getAttribute("data-region-btn");
+      document.querySelectorAll(".pgRegionBtn").forEach(b=>b.classList.toggle("active", b===btn));
+      document.querySelectorAll(".pg-region-plan").forEach(el=>{
+        el.style.display = el.getAttribute("data-region")===region ? "" : "none";
+      });
+    });
+  });
+  document.querySelectorAll(".pgBuyBtn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      startCheckout(btn.getAttribute("data-region"), btn.getAttribute("data-plan"), a.id);
+    });
+  });
   document.getElementById("pgRedeem").addEventListener("click", async ()=>{
     const code = document.getElementById("pgCode").value.trim();
     if(!code){ toast("Enter a code"); return; }
