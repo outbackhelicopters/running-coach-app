@@ -277,6 +277,28 @@
   @media(max-width:720px){.grid2{grid-template-columns:1fr;}}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
   @media(max-width:900px){.grid3{grid-template-columns:1fr;}}
+
+  /* App Preview section — stylised, illustrative mockups (not real
+     screenshots/data) of the athlete dashboard, calendar, and progress
+     tracker, so the homepage can show off the app without needing a real
+     athlete's data on display. */
+  .app-preview-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;}
+  @media(max-width:900px){.app-preview-grid{grid-template-columns:1fr;}}
+  .app-preview-card{text-align:center;}
+  .app-preview-frame{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:16px;box-shadow:var(--shadow);text-align:left;
+  }
+  .ap-row{margin-bottom:10px;}
+  .ap-header{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:.9rem;padding-bottom:8px;border-bottom:1px solid var(--line);}
+  .ap-hero{font-weight:600;font-size:.95rem;color:var(--rust);}
+  .ap-bar{height:8px;border-radius:99px;background:color-mix(in srgb, var(--ink) 8%, transparent);overflow:hidden;}
+  .ap-bar-fill{height:100%;background:var(--rust);border-radius:99px;}
+  .ap-card{background:color-mix(in srgb, var(--ink) 4%, transparent);border-radius:10px;padding:8px 10px;font-size:.82rem;}
+  .ap-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px;}
+  .ap-cal-cell{aspect-ratio:1;border-radius:5px;background:color-mix(in srgb, var(--ink) 6%, transparent);}
+  .ap-cal-active{background:var(--rust);}
+  .ap-caption{margin-top:12px;font-size:.82rem;font-weight:600;color:color-mix(in srgb, var(--ink) 65%, transparent);}
   table.simple{width:100%;border-collapse:collapse;font-size:.88rem;}
   table.simple th,table.simple td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);}
   .template-box{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;white-space:pre-wrap;font-size:.88rem;}
@@ -500,9 +522,9 @@ const CONFIG = {
 
   HOW_IT_WORKS: [
     "Complete your athlete questionnaire",
-    "Receive a personalised training plan",
-    "Follow your training through the app",
-    "Receive ongoing support and weekly check-ins"
+    "Receive your personalised training plan",
+    "We chat through the plan together to make sure it fits your life",
+    "Follow your training through the app, with ongoing support and weekly check-ins"
   ],
 
   WHAT_ATHLETES_RECEIVE: [
@@ -1365,6 +1387,47 @@ function renderLanding(){
           <h2>What athletes are saying</h2>
         </div>
         <div class="testimonial-grid">${testimonialsHtml}</div>
+      </div>
+    </section>
+
+    <section class="section" style="background:var(--card);">
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow-label">The App</div>
+          <h2>Everything In One Place</h2>
+          <p>Access your training plan, track your progress, complete weekly check-ins, and communicate with your coach directly through the app.</p>
+        </div>
+        <div class="app-preview-grid">
+          <div class="app-preview-card">
+            <div class="app-preview-frame">
+              <div class="ap-row ap-header">Dashboard</div>
+              <div class="ap-row ap-hero">Race Day: 42 days</div>
+              <div class="ap-row ap-bar"><div class="ap-bar-fill" style="width:64%;"></div></div>
+              <div class="ap-row ap-card">Next Session — Tempo Run, 8km</div>
+              <div class="ap-row ap-card">Weekly Streak: 4</div>
+            </div>
+            <div class="ap-caption">Athlete Dashboard</div>
+          </div>
+          <div class="app-preview-card">
+            <div class="app-preview-frame">
+              <div class="ap-row ap-header">Training Calendar</div>
+              <div class="ap-cal-grid">
+                ${Array.from({length:14}).map((_,i)=>`<div class="ap-cal-cell ${i===5?'ap-cal-active':''}"></div>`).join("")}
+              </div>
+              <div class="ap-row ap-card">Tue — Easy Run, 5km</div>
+            </div>
+            <div class="ap-caption">Training Calendar</div>
+          </div>
+          <div class="app-preview-card">
+            <div class="app-preview-frame">
+              <div class="ap-row ap-header">Progress</div>
+              <div class="ap-row ap-bar"><div class="ap-bar-fill" style="width:82%;"></div></div>
+              <div class="ap-row ap-card">Distance this month: 148km</div>
+              <div class="ap-row ap-card">Long Run PB: 18km</div>
+            </div>
+            <div class="ap-caption">Progress Tracker</div>
+          </div>
+        </div>
       </div>
     </section>
 
