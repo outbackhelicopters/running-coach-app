@@ -282,6 +282,23 @@
   .region-btn.active{background:var(--rust);color:#fff;border-color:var(--rust);}
   .pricing-card-featured{border:2px solid var(--rust);}
 
+  /* My Running Journey — visual timeline */
+  .running-journey{max-width:1040px;margin:36px auto 0;}
+  .journey-timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;position:relative;}
+  .journey-node{text-align:center;padding:0 4px;position:relative;}
+  .journey-icon{width:52px;height:52px;margin:0 auto 10px;border-radius:50%;background:var(--card);border:2px solid var(--rust);color:var(--rust);display:flex;align-items:center;justify-content:center;position:relative;z-index:2;}
+  .journey-icon svg{width:24px;height:24px;}
+  .journey-connector{position:absolute;top:26px;left:-50%;width:100%;height:2px;background:var(--line);z-index:1;}
+  .journey-node:first-child .journey-connector{display:none;}
+  .journey-year{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--rust);margin-bottom:4px;}
+  .journey-title{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.94rem;margin-bottom:6px;}
+  .journey-teaser{font-size:.8rem;color:color-mix(in srgb, var(--ink) 60%, transparent);line-height:1.4;}
+  .journey-detail{max-width:760px;margin:24px auto 0;padding-top:20px;border-top:1px solid var(--line);}
+  @media(max-width:900px){
+    .journey-timeline{grid-template-columns:1fr 1fr;gap:28px 14px;}
+    .journey-connector{display:none;}
+  }
+
   /* App Preview section — stylised, illustrative mockups (not real
      screenshots/data) of the athlete dashboard, calendar, and progress
      tracker, so the homepage can show off the app without needing a real
@@ -534,6 +551,18 @@ const CONFIG = {
     "Every challenge has reinforced the importance of having the right plan, staying consistent, and believing that progress is possible. I am now continuing my own journey towards completing the World Marathon Majors, setting new goals and experiencing the same highs, challenges, and lessons that every runner faces along the way.",
     "Now, I use the lessons from my own journey to help other runners achieve theirs. Whether you're taking your first steps into running, preparing for your first race, or chasing a new personal best, I understand that every runner has their own starting point and their own definition of success.",
     "My goal is simple: to help ordinary people achieve extraordinary fitness goals by creating personalised training that fits around their life, builds confidence, and gives them the structure, support, and accountability they need to achieve things they once thought were impossible."
+  ],
+  /* Short, scannable version of the journey above for the visual timeline
+     on the homepage — each entry maps 1:1 (same order) to a paragraph in
+     MY_RUNNING_JOURNEY, so "Learn more" can show the matching full story.
+     icon must be one of: start, build, medal, heart, flag, people. */
+  RUNNING_JOURNEY_MILESTONES: [
+    { year: "2024", title: "The Beginning", teaser: "Decided to challenge myself and find out what I was capable of.", icon: "start" },
+    { year: "2024", title: "Building The Foundation", teaser: "Built consistency and created training plans that worked around my life.", icon: "build" },
+    { year: "2024–25", title: "Chasing New Challenges", teaser: "Marathons, HYROX and endurance events that tested my limits.", icon: "medal" },
+    { year: "2025", title: "Running With Purpose", teaser: "Used running to give back — fundraising and meaningful experiences.", icon: "heart" },
+    { year: "Now", title: "Aiming For The Majors", teaser: "Chasing the World Marathon Majors, one goal at a time.", icon: "flag" },
+    { year: "Today", title: "Helping Others", teaser: "Using everything I've learned to help other runners reach their goals.", icon: "people" },
   ],
 
   WHO_I_HELP: [
@@ -807,6 +836,20 @@ async function athleteLogin(email,password){ return apiFetch("/api/athlete/login
 function uid(){ return Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
 function esc(s){ return (s==null?"":String(s)).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function firstName(name){ return (name||"there").trim().split(" ")[0]; }
+// Small line-style icon set for the "My Running Journey" timeline — plain
+// inline SVG (stroke="currentColor") so it themes with light/dark mode via
+// CSS, no image files needed.
+function journeyIcon(key){
+  const icons = {
+    start: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+    build: '<path d="M4 20V10M12 20V4M20 20v-7"/><path d="M2 20h20"/>',
+    medal: '<circle cx="12" cy="15" r="6"/><path d="M9 10.5 7 3h3l2 5M15 10.5 17 3h-3l-2 5"/>',
+    heart: '<path d="M12 20s-7-4.35-9.5-8.5C1 8 2.5 4.5 6 4.5c2 0 3.5 1.2 4.5 2.5C11.5 5.7 13 4.5 15 4.5c3.5 0 5 3.5 3.5 7C19.5 15.65 12 20 12 20z"/>',
+    flag: '<path d="M5 21V4"/><path d="M5 4h13l-3 4 3 4H5"/>',
+    people: '<circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M14 20c.3-2.3 1.9-4.2 4-4.8"/>',
+  };
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${icons[key]||icons.start}</svg>`;
+}
 function toast(msg){
   const t=document.createElement("div"); t.className="toast"; t.textContent=msg;
   document.body.appendChild(t); setTimeout(()=>t.remove(),2400);
@@ -1396,10 +1439,27 @@ function renderLanding(){
             <p>${esc(CONFIG.ABOUT_BIO)}</p>
           </div>
         </div>
-        ${(CONFIG.MY_RUNNING_JOURNEY||[]).length ? `
-        <div class="running-journey" style="max-width:760px;margin:36px auto 0;">
-          <h3 style="margin-bottom:14px;">My Running Journey</h3>
-          ${CONFIG.MY_RUNNING_JOURNEY.map(p=>`<p style="margin-bottom:14px;">${esc(p)}</p>`).join("")}
+        ${(CONFIG.RUNNING_JOURNEY_MILESTONES||[]).length ? `
+        <div class="running-journey">
+          <h3 style="text-align:center;margin-bottom:6px;">My Running Journey</h3>
+          <p class="muted" style="text-align:center;margin-bottom:28px;">From a standing start in 2024 to coaching other runners today.</p>
+          <div class="journey-timeline">
+            ${CONFIG.RUNNING_JOURNEY_MILESTONES.map((m,i)=>`
+              <div class="journey-node">
+                <div class="journey-icon">${journeyIcon(m.icon)}</div>
+                <div class="journey-connector" aria-hidden="true"></div>
+                <div class="journey-year">${esc(m.year)}</div>
+                <div class="journey-title">${esc(m.title)}</div>
+                <div class="journey-teaser">${esc(m.teaser)}</div>
+              </div>
+            `).join("")}
+          </div>
+          <div style="text-align:center;margin-top:8px;">
+            <button type="button" class="btn btn-ghost btn-sm" id="journeyToggle" aria-expanded="false">Learn more about my journey ↓</button>
+          </div>
+          <div class="journey-detail" id="journeyDetail" hidden>
+            ${(CONFIG.MY_RUNNING_JOURNEY||[]).map(p=>`<p style="margin-bottom:14px;">${esc(p)}</p>`).join("")}
+          </div>
         </div>
         ` : ""}
       </div>
@@ -1543,6 +1603,21 @@ function renderLanding(){
   wireHeroMedia();
   wireFaq();
   wirePricing();
+  wireJourney();
+}
+
+// "Learn more about my journey" expand/collapse under the visual timeline.
+function wireJourney(){
+  const btn = document.getElementById("journeyToggle");
+  const detail = document.getElementById("journeyDetail");
+  if(!btn || !detail) return;
+  btn.addEventListener("click", ()=>{
+    const open = !detail.hidden;
+    detail.hidden = open;
+    btn.setAttribute("aria-expanded", String(!open));
+    btn.textContent = open ? "Learn more about my journey ↓" : "Show less ↑";
+    if(!open && typeof detail.scrollIntoView === "function") detail.scrollIntoView({ behavior:"smooth", block:"nearest" });
+  });
 }
 
 // Region toggle (AU/UK) + "Buy plan"/"Subscribe" buttons on the homepage
