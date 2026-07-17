@@ -7,7 +7,9 @@ const path = require("path");
 const crypto = require("crypto");
 const express = require("express");
 const rateLimit = require("express-rate-limit");
+const Stripe = require("stripe");
 const { createPool, migrate, rowToAthlete } = require("./db");
+const { getPlan } = require("./plans");
 const {
   hashPassword,
   verifyPassword,
@@ -20,8 +22,31 @@ const {
 } = require("./auth");
 
 const app = express();
-app.use(express.json({ limit: "2mb" }));
+// Stash the raw request body alongside the parsed one — Stripe webhook
+// signature verification needs the exact original bytes, not a
+// re-serialized version of the parsed JSON.
+app.use(express.json({ limit: "2mb", verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use(authMiddleware);
+
+/* ------------------------------------------------------------
+   STRIPE — two entirely separate accounts, one per region, each
+   with its own secret key + webhook signing secret via env vars.
+   Both are optional at boot so the app still runs before they're
+   configured; endpoints that need them fail with a clear error.
+   ------------------------------------------------------------ */
+const stripeClients = {
+  AU: process.env.STRIPE_SECRET_KEY_AU ? new Stripe(process.env.STRIPE_SECRET_KEY_AU) : null,
+  UK: process.env.STRIPE_SECRET_KEY_UK ? new Stripe(process.env.STRIPE_SECRET_KEY_UK) : null,
+};
+const stripeWebhookSecrets = {
+  AU: process.env.STRIPE_WEBHOOK_SECRET_AU || "",
+  UK: process.env.STRIPE_WEBHOOK_SECRET_UK || "",
+};
+function getStripeClient(region) {
+  const client = stripeClients[region];
+  if (!client) throw new Error(`Stripe is not configured for region ${region}`);
+  return client;
+}
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -369,6 +394,146 @@ app.post("/api/resources", requireCoach, async (req, res) => {
 app.delete("/api/resources/:id", requireCoach, async (req, res) => {
   await pool.query("DELETE FROM resources WHERE id = $1", [req.params.id]);
   res.json({ ok: true });
+});
+
+/* ------------------------------------------------------------
+   STRIPE CHECKOUT — region-aware, catalog-driven (never trusts a
+   client-submitted price). Anonymous visitors can start a checkout
+   with no athleteId (a lead is created from it once payment lands,
+   via the webhook below). If athleteId is set, this checkout is
+   meant to unlock that specific athlete's dashboard — only that
+   athlete (or the coach) may attach their own id, so a stranger's
+   payment can't get pointed at someone else's account.
+   ------------------------------------------------------------ */
+app.post("/api/checkout/create-session", publicLimiter, async (req, res) => {
+  const { region, planId, athleteId } = req.body || {};
+  if (region !== "AU" && region !== "UK") return res.status(400).json({ error: "Invalid region" });
+  const plan = getPlan(region, planId);
+  if (!plan) return res.status(400).json({ error: "Invalid plan" });
+
+  let athlete = null;
+  if (athleteId) {
+    const isAllowed =
+      req.auth && (req.auth.role === "coach" || (req.auth.role === "athlete" && req.auth.athleteId === athleteId));
+    if (!isAllowed) return res.status(401).json({ error: "Login required to link this purchase to your account" });
+    const r = await pool.query("SELECT * FROM athletes WHERE id = $1", [athleteId]);
+    if (r.rowCount === 0) return res.status(404).json({ error: "Athlete not found" });
+    athlete = rowToAthlete(r.rows[0]);
+  }
+
+  try {
+    const stripe = getStripeClient(region);
+    const origin = `${req.protocol}://${req.get("host")}`;
+    const session = await stripe.checkout.sessions.create({
+      mode: plan.mode,
+      line_items: [
+        {
+          price_data: {
+            currency: plan.currency,
+            product_data: { name: plan.name },
+            unit_amount: plan.unitAmount,
+            ...(plan.mode === "subscription"
+              ? { recurring: { interval: plan.interval, interval_count: plan.intervalCount || 1 } }
+              : {}),
+          },
+          quantity: 1,
+        },
+      ],
+      customer_email: athlete && athlete.email ? athlete.email : undefined,
+      success_url: `${origin}/#/payment-success`,
+      cancel_url: `${origin}/#/payment-cancelled`,
+      metadata: {
+        region,
+        planId,
+        athleteId: athleteId || "",
+        gatesAccess: plan.gatesAccess ? "1" : "",
+      },
+    });
+    res.json({ url: session.url });
+  } catch (e) {
+    console.error("Stripe checkout session error:", e.message);
+    res.status(500).json({ error: "Couldn't start checkout — try again shortly" });
+  }
+});
+
+// Two Stripe accounts = two webhook endpoints, distinguished by ?region=.
+// Each is verified against that region's own signing secret, so a payload
+// (even a genuinely-signed one) can never be replayed against the wrong
+// account's secret.
+app.post("/api/stripe/webhook", async (req, res) => {
+  const region = req.query.region === "UK" ? "UK" : req.query.region === "AU" ? "AU" : null;
+  if (!region) return res.status(400).send("Missing or invalid region");
+  const secret = stripeWebhookSecrets[region];
+  if (!secret) return res.status(500).send("Webhook not configured for this region");
+
+  let event;
+  try {
+    const stripe = getStripeClient(region);
+    event = stripe.webhooks.constructEvent(req.rawBody, req.headers["stripe-signature"], secret);
+  } catch (err) {
+    console.error(`Stripe webhook (${region}) signature verification failed:`, err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const meta = session.metadata || {};
+    const gatesAccess = meta.gatesAccess === "1";
+    try {
+      if (meta.athleteId) {
+        const r = await pool.query("SELECT * FROM athletes WHERE id = $1", [meta.athleteId]);
+        if (r.rowCount) {
+          const data = r.rows[0].data || {};
+          if (gatesAccess) data.paymentStatus = "active";
+          data.stripe = Object.assign({}, data.stripe, {
+            region: meta.region,
+            planId: meta.planId,
+            customerId: session.customer || (data.stripe && data.stripe.customerId) || "",
+            subscriptionId: session.subscription || (data.stripe && data.stripe.subscriptionId) || "",
+            lastCheckoutAt: Date.now(),
+          });
+          await pool.query("UPDATE athletes SET data = $1, updated_at = now() WHERE id = $2", [
+            data,
+            meta.athleteId,
+          ]);
+        }
+      } else {
+        // Anonymous purchase from the public pricing section — create a new
+        // lead so the coach can follow up, same pattern as /api/inquiry.
+        const id = newId();
+        const details = session.customer_details || {};
+        const athlete = {
+          id,
+          createdAt: Date.now(),
+          stage: 0,
+          name: details.name || "",
+          email: details.email || "",
+          phone: "",
+          inquiry: { source: "Stripe checkout", plan: meta.planId, region: meta.region },
+          paymentStatus: gatesAccess ? "active" : "pending",
+          stripe: {
+            region: meta.region,
+            planId: meta.planId,
+            customerId: session.customer || "",
+            subscriptionId: session.subscription || "",
+            lastCheckoutAt: Date.now(),
+          },
+        };
+        await pool.query(`INSERT INTO athletes (id, name, email, stage, data) VALUES ($1,$2,$3,0,$4)`, [
+          id,
+          athlete.name,
+          athlete.email,
+          athlete,
+        ]);
+      }
+    } catch (e) {
+      // Signature already verified at this point — an internal error here
+      // shouldn't make Stripe retry forever, so still ack with 200.
+      console.error(`Stripe webhook (${region}) handling error:`, e.message);
+    }
+  }
+
+  res.json({ received: true });
 });
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
