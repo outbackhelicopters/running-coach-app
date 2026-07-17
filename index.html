@@ -483,6 +483,14 @@ const CONFIG = {
 
   ABOUT_PHOTO: "assets/tom-photo.jpg",
   ABOUT_BIO: "Hi, I'm Tom. I help everyday runners build confidence, stay consistent, and achieve goals they never thought possible. Every athlete receives a personalised training plan tailored to their experience, lifestyle, schedule, and goals. Whether you're training for your first 5K or your next marathon, I'll provide the structure, support, and accountability you need to succeed.",
+  MY_RUNNING_JOURNEY: [
+    "I wasn't always a runner. My own running journey only began in 2024, when I decided to challenge myself and discover what I was capable of.",
+    "Like many everyday runners, I started by building consistency, learning what worked for me, and creating my own training plans around my lifestyle. Through commitment, structure, and a willingness to keep improving, running quickly became something I was passionate about.",
+    "Since starting my journey, I have continued to challenge myself through a variety of events, including completing marathons, HYROX competitions, and endurance challenges that tested both my physical and mental limits. I have also used running as a way to give back, fundraising through my challenges and creating experiences that go beyond simply crossing the finish line.",
+    "Every challenge has reinforced the importance of having the right plan, staying consistent, and believing that progress is possible. I am now continuing my own journey towards completing the World Marathon Majors, setting new goals and experiencing the same highs, challenges, and lessons that every runner faces along the way.",
+    "Now, I use the lessons from my own journey to help other runners achieve theirs. Whether you're taking your first steps into running, preparing for your first race, or chasing a new personal best, I understand that every runner has their own starting point and their own definition of success.",
+    "My goal is simple: to help ordinary people achieve extraordinary fitness goals by creating personalised training that fits around their life, builds confidence, and gives them the structure, support, and accountability they need to achieve things they once thought were impossible."
+  ],
 
   WHO_I_HELP: [
     { title: "Beginners", points: ["Complete your first 5K", "Build confidence", "Learn how to train properly"] },
@@ -1183,13 +1191,21 @@ async function render(){
    SITE HEADER / FOOTER (public pages)
    ============================================================ */
 function siteHeader(){
+  // A logged-in athlete or coach browsing the public site (e.g. checking a
+  // FAQ, sharing a link) shouldn't have to log back in to get to their
+  // dashboard — surface a direct link instead of the generic login links.
+  const session = getSession();
+  const loginLinks = session && session.role==="athlete"
+    ? `<a href="#/athlete-view/${session.athleteId}/dashboard">My Dashboard</a>`
+    : session && session.role==="coach"
+    ? `<a href="#/dashboard">Coach Dashboard</a>`
+    : `<a href="#/login">Athlete login</a><a href="#/dashboard">Coach login</a>`;
   return `
   <header class="site">
     <div class="bar">
       <a class="brand" href="#/">${esc(CONFIG.BUSINESS_NAME)}${IS_DEMO?'<span class="badge-demo">DEMO</span>':''}</a>
       <nav>
-        <a href="#/login">Athlete login</a>
-        <a href="#/dashboard">Coach login</a>
+        ${loginLinks}
         <button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme" title="Switches between light, dark and auto (follows system + time of day)">${themeToggleLabel()}</button>
         <a class="cta" href="#/questionnaire">Get started</a>
       </nav>
@@ -1198,14 +1214,19 @@ function siteHeader(){
 }
 function siteFooter(){
   const wa = waLink(CONFIG.WHATSAPP_NUMBER, `Hi ${CONFIG.COACH_FIRST}, I'd like to find out more about coaching.`);
+  const session = getSession();
+  const footerLoginLinks = session && session.role==="athlete"
+    ? `<a href="#/athlete-view/${session.athleteId}/dashboard">My Dashboard</a>`
+    : session && session.role==="coach"
+    ? `<a href="#/dashboard">Coach Dashboard</a>`
+    : `<a href="#/login">Athlete login</a><a href="#/dashboard">Coach login</a>`;
   return `
   <footer class="site">
     <div class="container">
       <div class="contact-row">
         ${wa ? `<a href="${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
         <a href="mailto:${esc(CONFIG.CONTACT_EMAIL)}">${esc(CONFIG.CONTACT_EMAIL)}</a>
-        <a href="#/login">Athlete login</a>
-        <a href="#/dashboard">Coach login</a>
+        ${footerLoginLinks}
       </div>
       <div class="copyright">© ${new Date().getFullYear()} ${esc(CONFIG.BUSINESS_NAME)}</div>
     </div>
@@ -1298,6 +1319,12 @@ function renderLanding(){
             <p>${esc(CONFIG.ABOUT_BIO)}</p>
           </div>
         </div>
+        ${(CONFIG.MY_RUNNING_JOURNEY||[]).length ? `
+        <div class="running-journey" style="max-width:760px;margin:36px auto 0;">
+          <h3 style="margin-bottom:14px;">My Running Journey</h3>
+          ${CONFIG.MY_RUNNING_JOURNEY.map(p=>`<p style="margin-bottom:14px;">${esc(p)}</p>`).join("")}
+        </div>
+        ` : ""}
       </div>
     </section>
 
@@ -2939,7 +2966,7 @@ async function renderAthleteView(athleteId, tab){
       <div class="dash-top">
         ${preview
           ? `<a class="btn btn-ghost" href="#/dashboard/athlete/${athlete.id}">← Coach view</a><span class="tag">Preview — what ${esc(firstName(athlete.name))} would see</span><button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button>`
-          : `<span class="brand">${esc(CONFIG.BUSINESS_NAME)}</span><button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button><button class="btn btn-ghost btn-sm" id="athleteLogoutBtn">Log out</button>`
+          : `<span class="brand">${esc(CONFIG.BUSINESS_NAME)}</span><a class="btn btn-ghost btn-sm" href="#/">View site</a><button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button><button class="btn btn-ghost btn-sm" id="athleteLogoutBtn">Log out</button>`
         }
       </div>
       <div class="dash-body athlete-view-body">
