@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tom McGookin Coaching — Athlete Pipeline</title>
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/logo-mark-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/logo-mark-512.png">
+<meta name="theme-color" content="#1C3FA6">
+<meta property="og:title" content="Tom McGookin Coaching">
+<meta property="og:description" content="Personalised run coaching, built around your life and your goal race.">
+<meta property="og:image" content="assets/logo-og.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -12,12 +21,9 @@
     --ink:   #15181C;
     --paper: #FFFFFF;
     --card:  #F7F7F5;
-    --rust:  #FF5A4E;
-    --moss:  #17B6C4;
-    --dusk:  #123A5E;
-    --navy-deep: #050C18;
-    --gold:   #FFD23F;
-    --orange: #FF9F1C;
+    --rust:  #1C3FA6;
+    --moss:  #C8850A;
+    --dusk:  #3B5BC4;
     --line: rgba(0,0,0,0.10);
     --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06);
   }
@@ -27,9 +33,9 @@
     --ink:   #F3F4F6;
     --paper: #0E1114;
     --card:  #171B20;
-    --rust:  #FF6E62;
-    --moss:  #2FD1DE;
-    --dusk:  #6FB3E8;
+    --rust:  #4C6FEA;
+    --moss:  #D99A2C;
+    --dusk:  #6E8FE8;
     --line: rgba(255,255,255,0.13);
     --shadow: 0 1px 2px rgba(0,0,0,0.45), 0 4px 20px rgba(0,0,0,0.5);
   }
@@ -65,6 +71,9 @@
   }
   header.site .bar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;max-width:1080px;margin:0 auto;}
   header.site .brand{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.15rem;color:var(--ink);text-decoration:none;}
+  .brand-mark{display:inline-flex;align-items:center;gap:10px;}
+  .brand-mark-icon{border-radius:7px;display:block;flex:0 0 auto;}
+  footer.site .brand-mark{color:var(--ink);font-weight:700;font-family:'Space Grotesk',sans-serif;margin-bottom:10px;}
   header.site nav a{margin-left:18px;text-decoration:none;color:var(--ink);font-size:.92rem;font-weight:600;}
   header.site nav a.cta{background:var(--rust);color:#fff;padding:8px 16px;border-radius:8px;}
   header.site nav .theme-toggle-btn{margin-left:18px;}
@@ -76,8 +85,8 @@
     font-size:.95rem;font-weight:700;cursor:pointer;text-decoration:none;
     font-family:inherit;transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
   }
-  .btn-primary{background:var(--rust);color:#fff;box-shadow:0 6px 16px rgba(255,90,78,0.25);}
-  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(255,90,78,0.32);}
+  .btn-primary{background:var(--rust);color:#fff;box-shadow:0 6px 16px rgba(28,63,166,0.25);}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(28,63,166,0.32);}
   .btn-secondary{background:transparent;color:var(--ink);border-color:var(--line);}
   .btn-secondary:hover{background:color-mix(in srgb, var(--ink) 5%, transparent);transform:translateY(-2px);}
   .btn-moss{background:var(--moss);color:#fff;}
@@ -95,7 +104,7 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow);}
 
   /* ============================================================
-     HOMEPAGE — clean white / near-black / single coral accent.
+     HOMEPAGE — clean white / near-black / navy + gold accent.
      Large imagery, generous spacing, minimal chrome.
      ============================================================ */
   .section{padding:72px 0;}
@@ -196,7 +205,7 @@
   .testimonial-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;}
   .testimonial-card{border:1px solid var(--line);border-radius:16px;padding:24px;background:var(--card);position:relative;}
   .testimonial-card .placeholder-tag{
-    display:inline-block;background:rgba(255,90,78,0.1);color:var(--rust);font-size:.68rem;font-weight:700;
+    display:inline-block;background:rgba(28,63,166,0.1);color:var(--rust);font-size:.68rem;font-weight:700;
     letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:20px;margin-bottom:12px;
   }
   .testimonial-card p.quote{font-size:.98rem;color:color-mix(in srgb, var(--ink) 80%, transparent);font-style:italic;margin-bottom:12px;}
@@ -267,7 +276,7 @@
   .pin-dots span{width:14px;height:14px;border-radius:50%;border:1px solid var(--ink);}
   .pin-dots span.filled{background:var(--ink);}
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px;}
-  .tag{display:inline-block;background:rgba(23,182,196,0.15);color:var(--moss);border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700;}
+  .tag{display:inline-block;background:rgba(200,133,10,0.15);color:var(--moss);border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:700;}
   /* profile */
   .profile-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px;}
   .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:20px;}
@@ -337,7 +346,7 @@
   /* overview cards (coach dashboard + progress tabs) */
   .overview-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
   .ov-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;}
-  .ov-card.ov-warn{border-color:var(--rust);background:rgba(255,90,78,0.06);}
+  .ov-card.ov-warn{border-color:var(--rust);background:rgba(28,63,166,0.06);}
   .ov-num{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.6rem;line-height:1.1;}
   .ov-label{font-size:.78rem;color:color-mix(in srgb, var(--ink) 60%, transparent);margin-top:4px;}
   .ov-sub{font-size:.72rem;color:color-mix(in srgb, var(--ink) 45%, transparent);margin-top:2px;}
@@ -371,14 +380,14 @@
   .av-welcome .av-greeting{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.3rem;margin-bottom:4px;}
   .av-welcome .av-goal{font-weight:600;margin-bottom:2px;}
   .av-next-workout .av-session-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.15rem;}
-  .celebrate-card{background:rgba(255,90,78,0.08);border-color:var(--rust);text-align:center;}
+  .celebrate-card{background:rgba(28,63,166,0.08);border-color:var(--rust);text-align:center;}
 
   .week-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;}
   .week-nav select{width:auto;}
 
   .session-list{display:flex;flex-direction:column;gap:8px;}
   .session-row{border:1px solid var(--line);border-radius:12px;background:var(--paper);overflow:hidden;}
-  .session-row.done{border-color:rgba(23,182,196,0.4);}
+  .session-row.done{border-color:rgba(200,133,10,0.4);}
   .session-row-head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;flex-wrap:wrap;}
   .session-check{font-size:1rem;}
   .session-day{font-size:.78rem;color:color-mix(in srgb, var(--ink) 50%, transparent);flex:0 0 auto;min-width:70px;}
@@ -387,7 +396,7 @@
   .session-detail p{margin:0 0 8px;}
 
   .achievement-list{display:flex;flex-wrap:wrap;gap:8px;}
-  .achievement-chip{background:rgba(255,90,78,0.1);color:var(--rust);border-radius:20px;padding:6px 12px;font-size:.8rem;font-weight:700;}
+  .achievement-chip{background:rgba(28,63,166,0.1);color:var(--rust);border-radius:20px;padding:6px 12px;font-size:.8rem;font-weight:700;}
 
   .bottom-nav{
     position:fixed;bottom:0;left:0;right:0;background:var(--paper);border-top:1px solid var(--line);
@@ -397,7 +406,7 @@
     text-decoration:none;color:color-mix(in srgb, var(--ink) 50%, transparent);font-size:.72rem;font-weight:600;text-align:center;
     padding:6px 8px;border-radius:8px;
   }
-  .bottom-nav-item.active{color:var(--rust);background:rgba(255,90,78,0.08);}
+  .bottom-nav-item.active{color:var(--rust);background:rgba(28,63,166,0.08);}
 
   /* ============================================================
      MOBILE RESPONSIVE OVERRIDES
@@ -509,18 +518,18 @@ const CONFIG = {
       label: "Australia", flag: "🇦🇺",
       plans: [
         { id: "premiumSub", name: "Premium Personalised Plan", priceLabel: "A$30.00 every 2 weeks", description: "App access, personalised training plan, check-ins, plan adjustments, coaching and race day support.", featured: true, oneOffId: "premiumOnce", oneOffLabel: "A$250.00 one-time" },
-        { id: "marathon", name: "One-off Marathon Plan", priceLabel: "A$80.00 one-time", description: "A single personalised marathon training plan, delivered digitally." },
-        { id: "half", name: "One-off Half Marathon Plan", priceLabel: "A$65.00 one-time", description: "A single personalised half marathon training plan, delivered digitally." },
         { id: "fiveK", name: "One-off 5K Plan", priceLabel: "A$45.00 one-time", description: "A single personalised 5K training plan, delivered digitally." },
+        { id: "half", name: "One-off Half Marathon Plan", priceLabel: "A$65.00 one-time", description: "A single personalised half marathon training plan, delivered digitally." },
+        { id: "marathon", name: "One-off Marathon Plan", priceLabel: "A$80.00 one-time", description: "A single personalised marathon training plan, delivered digitally." },
       ],
     },
     UK: {
       label: "United Kingdom", flag: "🇬🇧",
       plans: [
         { id: "premiumSub", name: "Premium Personalised Plan", priceLabel: "£29.00 per month", description: "App access, personalised training plan, check-ins, plan adjustments, coaching and race day support.", featured: true, oneOffId: "premiumOnce", oneOffLabel: "£125.00 one-time" },
-        { id: "marathon", name: "One-off Marathon Plan", priceLabel: "£45.00 one-time", description: "A single personalised marathon training plan, delivered digitally." },
-        { id: "half", name: "One-off Half Marathon Plan", priceLabel: "£30.00 one-time", description: "A single personalised half marathon training plan, delivered digitally." },
         { id: "fiveK", name: "One-off 5K Plan", priceLabel: "£20.00 one-time", description: "A single personalised 5K training plan, delivered digitally." },
+        { id: "half", name: "One-off Half Marathon Plan", priceLabel: "£30.00 one-time", description: "A single personalised half marathon training plan, delivered digitally." },
+        { id: "marathon", name: "One-off Marathon Plan", priceLabel: "£45.00 one-time", description: "A single personalised marathon training plan, delivered digitally." },
       ],
     },
   },
@@ -836,6 +845,16 @@ async function athleteLogin(email,password){ return apiFetch("/api/athlete/login
 function uid(){ return Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
 function esc(s){ return (s==null?"":String(s)).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function firstName(name){ return (name||"there").trim().split(" ")[0]; }
+// Logo mark — the two-runner icon from assets/logo-mark-*.png, used
+// wherever the brand appears (nav, dashboards, footer). label=false
+// renders just the icon (e.g. next to a page title like "Settings").
+function brandMark(label, opts){
+  opts = opts || {};
+  const size = opts.size || 28;
+  const img = `<img src="assets/logo-mark-96.png" alt="" width="${size}" height="${size}" class="brand-mark-icon" style="width:${size}px;height:${size}px;">`;
+  if(!label) return img;
+  return `<span class="brand-mark">${img}<span>${esc(label)}</span></span>`;
+}
 // Small line-style icon set for the "My Running Journey" timeline — plain
 // inline SVG (stroke="currentColor") so it themes with light/dark mode via
 // CSS, no image files needed.
@@ -991,10 +1010,28 @@ function paceLabel(minPerKm){
 const ACTIVE_STAGES = [6,7];
 function isActiveAthlete(a){ return ACTIVE_STAGES.includes(a.stage); }
 function getWeeks(a){ return (a.plan && a.plan.weeks) || []; }
+// Derives "current week" from real calendar dates instead of the manually-
+// toggled a.currentWeekIndex, whenever at least one week has a startDate
+// set. Picks the most recently-started week (startDate <= today); if no
+// week has started yet, picks the earliest upcoming one. Returns null if
+// no week has a startDate at all, so callers can fall back to the manual
+// index for plans that were never dated.
+function computeDateBasedWeekIndex(a){
+  const weeks = getWeeks(a);
+  if(!weeks.length) return null;
+  const dated = weeks.map((w,i)=>({ i, start:w.startDate })).filter(w=>w.start);
+  if(!dated.length) return null;
+  const todayISO = toLocalISODate(new Date());
+  const started = dated.filter(w=>w.start<=todayISO).sort((x,y)=> y.start.localeCompare(x.start));
+  if(started.length) return started[0].i;
+  const upcoming = dated.slice().sort((x,y)=> x.start.localeCompare(y.start));
+  return upcoming[0].i;
+}
 function getCurrentWeek(a){
   const weeks = getWeeks(a);
   if(!weeks.length) return null;
-  const idx = Math.min(Math.max(a.currentWeekIndex||0,0), weeks.length-1);
+  const dateIdx = computeDateBasedWeekIndex(a);
+  const idx = dateIdx!=null ? dateIdx : Math.min(Math.max(a.currentWeekIndex||0,0), weeks.length-1);
   return weeks[idx];
 }
 // The week an athlete is currently LOOKING at in the Training tab. This is
@@ -1003,11 +1040,15 @@ function getCurrentWeek(a){
 // and the "Current" tag in Plan Builder). Browsing forward/back to preview
 // a different week must never overwrite that shared, persisted value —
 // it's local-only and resets whenever the athlete navigates to the tab
-// fresh (see _avWeekIndex reset in renderAthleteView).
+// fresh (see _avWeekIndex reset in renderAthleteView). Falls back to the
+// same date-derived index as getCurrentWeek() so browsing starts on the
+// week that's actually current by the calendar, not a stale manual toggle.
 function getViewedWeek(a){
   const weeks = getWeeks(a);
   if(!weeks.length) return null;
-  const want = _avWeekIndex!=null ? _avWeekIndex : (a.currentWeekIndex||0);
+  const dateIdx = computeDateBasedWeekIndex(a);
+  const fallbackIdx = dateIdx!=null ? dateIdx : (a.currentWeekIndex||0);
+  const want = _avWeekIndex!=null ? _avWeekIndex : fallbackIdx;
   const idx = Math.min(Math.max(want,0), weeks.length-1);
   return weeks[idx];
 }
@@ -1161,7 +1202,8 @@ function addWeekToCalendar(a, week){
    athlete's current week (not counting an in-progress current week). */
 function computeStreak(a){
   const weeks = getWeeks(a);
-  const idx = Math.min(Math.max(a.currentWeekIndex||0,0), weeks.length-1);
+  const dateIdx = computeDateBasedWeekIndex(a);
+  const idx = Math.min(Math.max(dateIdx!=null ? dateIdx : (a.currentWeekIndex||0),0), weeks.length-1);
   let streak = 0;
   for(let i=idx-1;i>=0;i--){
     const p = weekProgress(weeks[i]);
@@ -1306,7 +1348,7 @@ function siteHeader(){
   return `
   <header class="site">
     <div class="bar">
-      <a class="brand" href="#/">${esc(CONFIG.BUSINESS_NAME)}${IS_DEMO?'<span class="badge-demo">DEMO</span>':''}</a>
+      <a class="brand brand-mark" href="#/">${brandMark()}<span>${esc(CONFIG.BUSINESS_NAME)}</span>${IS_DEMO?'<span class="badge-demo">DEMO</span>':''}</a>
       <nav>
         ${loginLinks}
         <button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme" title="Switches between light, dark and auto (follows system + time of day)">${themeToggleLabel()}</button>
@@ -1326,6 +1368,7 @@ function siteFooter(){
   return `
   <footer class="site">
     <div class="container">
+      <div class="brand-mark">${brandMark()}<span>${esc(CONFIG.BUSINESS_NAME)}</span></div>
       <div class="contact-row">
         ${wa ? `<a href="${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
         <a href="mailto:${esc(CONFIG.CONTACT_EMAIL)}">${esc(CONFIG.CONTACT_EMAIL)}</a>
@@ -1873,6 +1916,7 @@ async function renderCoachAuthScreen(onSuccess){
   root.innerHTML = `
     <div class="pin-gate">
       <div class="pin-box" style="max-width:360px;">
+        <div style="margin-bottom:14px;">${brandMark(null,{size:52})}</div>
         <h2>${creating ? "Set up your coach account" : "Coach login"}</h2>
         <p class="muted">${creating
           ? "This is the one account that controls your dashboard — pick a password you'll remember."
@@ -1912,6 +1956,7 @@ function renderAthleteLoginScreen(){
   root.innerHTML = `
     <div class="pin-gate">
       <div class="pin-box" style="max-width:360px;">
+        <div style="margin-bottom:14px;">${brandMark(null,{size:52})}</div>
         <h2>Athlete login</h2>
         <p class="muted">Log in with the email and password your coach set up for you.</p>
         <div class="field" style="text-align:left;"><label>Email</label><input type="email" id="alEmail"></div>
@@ -1958,7 +2003,7 @@ async function renderDashboard(athleteId, params){
   root.innerHTML = `
     <div class="dash-shell">
       <div class="dash-top">
-        <span class="brand">${esc(CONFIG.BUSINESS_NAME)} — Dashboard${IS_DEMO?'<span class="badge-demo">DEMO</span>':''}</span>
+        <span class="brand brand-mark">${brandMark()}<span>${esc(CONFIG.BUSINESS_NAME)} — Dashboard</span>${IS_DEMO?'<span class="badge-demo">DEMO</span>':''}</span>
         <div>
           <button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button>
           <a class="btn btn-ghost" href="#/dashboard/resources">Resources</a>
@@ -2437,6 +2482,11 @@ function normalizePaceZones(a){
 function tabPlan(a){
   const zones = normalizePaceZones(a);
   const weeks = getWeeks(a);
+  // Same date-derived index used on the athlete dashboard, so the "Current"
+  // tag here always matches what the athlete actually sees — once any week
+  // has a start date, that date drives "current", not the manual toggle.
+  const dateIdx = computeDateBasedWeekIndex(a);
+  const currentIdx = dateIdx!=null ? dateIdx : (a.currentWeekIndex||0);
   return `
     <div class="card" style="margin-bottom:16px;">
       <h3>Pace zones</h3>
@@ -2460,7 +2510,7 @@ function tabPlan(a){
     </div>
     ${weeks.length ? weeks.map((w,wi)=>{
       const p = weekProgress(w);
-      const isCurrent = wi === (a.currentWeekIndex||0);
+      const isCurrent = wi === currentIdx;
       return `
       <div class="card week-card ${isCurrent?'week-current':''}" style="margin-bottom:16px;">
         <div class="week-head">
@@ -2470,11 +2520,11 @@ function tabPlan(a){
           </div>
           <div class="row-actions" style="align-items:flex-end;">
             <div class="field" style="margin:0;"><label style="font-size:.72rem;">Week starts</label><input type="date" class="weekStartDate" data-wi="${wi}" value="${esc(w.startDate||"")}" style="width:auto;"></div>
-            ${!isCurrent?`<button class="btn btn-ghost btn-sm setCurrentWeek" data-wi="${wi}">Set as current</button>`:""}
+            ${(!isCurrent && dateIdx==null)?`<button class="btn btn-ghost btn-sm setCurrentWeek" data-wi="${wi}">Set as current</button>`:""}
             <button class="btn btn-ghost btn-sm removeWeek" data-wi="${wi}">Remove week</button>
           </div>
         </div>
-        <p class="muted" style="font-size:.78rem;margin-top:-8px;">Week start date must be correct for "Add to calendar" to land on the right days.</p>
+        <p class="muted" style="font-size:.78rem;margin-top:-8px;">${dateIdx==null ? `Week start date must be correct for "Add to calendar" to land on the right days.` : `"Current" is set automatically from week start dates now — the athlete's dashboard always shows whichever week's date range includes today.`}</p>
         <div class="field"><label>Coach focus for this week</label><textarea class="weekFocus" data-wi="${wi}" rows="2" placeholder="Focus on consistency rather than pace...">${esc(w.coachFocus||"")}</textarea></div>
         <button class="btn btn-secondary btn-sm saveWeekFocus" data-wi="${wi}">Save focus</button>
         <div style="margin-top:14px;">
@@ -2482,7 +2532,7 @@ function tabPlan(a){
             <div class="list-item">
               <div class="meta">${esc(s.day||"")} ${s.completed?'<span class="tag">Completed</span>':''}</div>
               <strong>${esc(s.type||"")}</strong> ${s.distance?`— ${esc(s.distance)}km`:""} ${s.pace?`@ ${esc(s.pace)}`:""}
-              ${s.description?`<div class="muted">${esc(s.description)}</div>`:""}
+              ${s.description?`<div class="muted" style="white-space:pre-wrap;">${esc(s.description)}</div>`:""}
               ${s.completed && s.actual && s.actual.distance ? `<div class="muted">Actual: ${esc(s.actual.distance)}km, RPE ${esc(s.actual.rpe||"—")}${s.actual.notes?` — "${esc(s.actual.notes)}"`:""}</div>` : ""}
               <div class="row-actions">
                 <button class="btn btn-ghost btn-sm editSession" data-wi="${wi}" data-si="${si}">Edit</button>
@@ -2905,7 +2955,7 @@ async function renderSettings(){
     <div class="dash-shell">
       <div class="dash-top">
         <a class="btn btn-ghost" href="#/dashboard">← Dashboard</a>
-        <span class="brand">Settings</span>
+        <span class="brand brand-mark">${brandMark()}<span>Settings</span></span>
         <button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button>
         <button class="btn btn-ghost" id="coachLogoutLink">Log out</button>
       </div>
@@ -3071,7 +3121,7 @@ async function renderResources(){
     <div class="dash-shell">
       <div class="dash-top">
         <a class="btn btn-ghost" href="#/dashboard">← Dashboard</a>
-        <span class="brand">Resources</span>
+        <span class="brand brand-mark">${brandMark()}<span>Resources</span></span>
         <button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button>
         <button class="btn btn-ghost btn-sm" id="coachLogoutLink">Log out</button>
       </div>
@@ -3185,7 +3235,7 @@ async function renderAthleteView(athleteId, tab){
       <div class="dash-top">
         ${preview
           ? `<a class="btn btn-ghost" href="#/dashboard/athlete/${athlete.id}">← Coach view</a><span class="tag">Preview — what ${esc(firstName(athlete.name))} would see</span><button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button>`
-          : `<span class="brand">${esc(CONFIG.BUSINESS_NAME)}</span><a class="btn btn-ghost btn-sm" href="#/">View site</a><button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button><button class="btn btn-ghost btn-sm" id="athleteLogoutBtn">Log out</button>`
+          : `<span class="brand brand-mark">${brandMark()}<span>${esc(CONFIG.BUSINESS_NAME)}</span></span><a class="btn btn-ghost btn-sm" href="#/">View site</a><button class="theme-toggle-btn" onclick="cycleTheme()" aria-label="Toggle color theme">${themeToggleLabel()}</button><button class="btn btn-ghost btn-sm" id="athleteLogoutBtn">Log out</button>`
         }
       </div>
       <div class="dash-body athlete-view-body">
@@ -3235,6 +3285,7 @@ function renderPaymentGate(a){
   }).join("");
   return `
     <div class="card" style="max-width:480px;margin:20px auto;text-align:center;">
+      <div style="margin-bottom:10px;">${brandMark(null,{size:44})}</div>
       <h2 style="margin-bottom:6px;">Almost there, ${esc(firstName(a.name))}!</h2>
       <p class="muted">Your dashboard, training plan, and resources unlock once your coaching payment is set up. Pay securely below, or enter an access code if you have one.</p>
       <div class="region-toggle" style="margin:14px 0;">
@@ -3370,7 +3421,7 @@ function avDashboard(a){
     ${lastMsg ? `
     <div class="card">
       <h3>Coach Message</h3>
-      <p style="margin:0;">${esc(lastMsg.text)}</p>
+      <p style="margin:0;white-space:pre-wrap;">${esc(lastMsg.text)}</p>
       <div class="meta" style="margin-top:6px;">${esc(lastMsg.date)}</div>
     </div>` : ""}
 
@@ -3391,7 +3442,8 @@ function avDashboard(a){
 
 function avTraining(a){
   const weeks = getWeeks(a);
-  const want = _avWeekIndex!=null ? _avWeekIndex : (a.currentWeekIndex||0);
+  const dateIdx = computeDateBasedWeekIndex(a);
+  const want = _avWeekIndex!=null ? _avWeekIndex : (dateIdx!=null ? dateIdx : (a.currentWeekIndex||0));
   const idx = Math.min(Math.max(want,0), Math.max(weeks.length-1,0));
   const week = weeks[idx];
   const progress = weekProgress(week);
@@ -3424,14 +3476,15 @@ function avTraining(a){
               <span class="session-check">${s.completed?"✅":"⭕"}</span>
               <span class="session-day">${esc(s.day||"—")}</span>
               <span class="session-type">${esc(s.type)}</span>
-              <span class="muted">${s.distance?esc(s.distance)+"km":""}</span>
+              <span class="muted">${s.distance?esc(s.distance)+"km":""}${s.pace?` @ ${esc(s.pace)}`:""}</span>
             </div>
             <div class="session-detail" id="sd-${si}" style="display:none;">
-              ${s.warmup?`<p><strong>Warm-up:</strong> ${esc(s.warmup)}</p>`:""}
-              ${s.main?`<p><strong>Main session:</strong> ${esc(s.main)}</p>`:""}
-              ${s.cooldown?`<p><strong>Cool-down:</strong> ${esc(s.cooldown)}</p>`:""}
-              ${s.coachNotes?`<p><strong>Coach notes:</strong> ${esc(s.coachNotes)}</p>`:""}
-              ${!s.warmup && !s.main && !s.cooldown && !s.coachNotes && s.description ? `<p>${esc(s.description)}</p>`:""}
+              ${s.pace?`<p><strong>Target pace:</strong> ${esc(s.pace)}</p>`:""}
+              ${s.warmup?`<p><strong>Warm-up:</strong> <span style="white-space:pre-wrap;">${esc(s.warmup)}</span></p>`:""}
+              ${s.main?`<p><strong>Main session:</strong> <span style="white-space:pre-wrap;">${esc(s.main)}</span></p>`:""}
+              ${s.cooldown?`<p><strong>Cool-down:</strong> <span style="white-space:pre-wrap;">${esc(s.cooldown)}</span></p>`:""}
+              ${s.coachNotes?`<p><strong>Coach notes:</strong> <span style="white-space:pre-wrap;">${esc(s.coachNotes)}</span></p>`:""}
+              ${!s.warmup && !s.main && !s.cooldown && !s.coachNotes && s.description ? `<p style="white-space:pre-wrap;">${esc(s.description)}</p>`:""}
               ${s.completed ? `<p class="muted">Actual: ${esc(s.actual&&s.actual.distance||"—")}km, ${esc(s.actual&&s.actual.time||"—")}, RPE ${esc(s.actual&&s.actual.rpe||"—")}${s.actual&&s.actual.notes?` — "${esc(s.actual.notes)}"`:""}</p>` : `<button class="btn btn-primary btn-sm markCompleteBtn" data-si="${si}">Mark Complete</button>`}
               <button class="btn btn-ghost btn-sm avAddSessionCal" data-si="${si}" style="margin-left:6px;">📅 Add to calendar</button>
             </div>
@@ -3441,7 +3494,7 @@ function avTraining(a){
       ${week.coachFocus ? `
         <div class="card" style="margin-top:16px;">
           <h3>Coach Focus For This Week</h3>
-          <p style="margin:0;">${esc(week.coachFocus)}</p>
+          <p style="margin:0;white-space:pre-wrap;">${esc(week.coachFocus)}</p>
         </div>
       ` : ""}
     `}
@@ -3539,7 +3592,7 @@ function avMessages(a){
     </div>
     <div class="card">
       <h3>Notes from your coach</h3>
-      ${msgs.length ? msgs.map(m=>`<div class="list-item"><div class="meta">${esc(m.date)}</div>${esc(m.text)}</div>`).join("") : `<p class="muted">No messages yet.</p>`}
+      ${msgs.length ? msgs.map(m=>`<div class="list-item"><div class="meta">${esc(m.date)}</div><div style="white-space:pre-wrap;">${esc(m.text)}</div></div>`).join("") : `<p class="muted">No messages yet.</p>`}
     </div>
   `;
 }
@@ -3639,7 +3692,8 @@ function wireAthleteView(tab, a){
       _avWeekIndex = idx;
       renderAthleteTabContent(a, "training");
     }
-    const curIdx = _avWeekIndex!=null ? _avWeekIndex : (a.currentWeekIndex||0);
+    const dateIdx = computeDateBasedWeekIndex(a);
+    const curIdx = _avWeekIndex!=null ? _avWeekIndex : (dateIdx!=null ? dateIdx : (a.currentWeekIndex||0));
     if(prevBtn) prevBtn.addEventListener("click", ()=>goToWeek(Math.max(0,curIdx-1)));
     if(nextBtn) nextBtn.addEventListener("click", ()=>goToWeek(Math.min(getWeeks(a).length-1,curIdx+1)));
     if(sel) sel.addEventListener("change", ()=>goToWeek(parseInt(sel.value,10)));
