@@ -2486,9 +2486,25 @@ function tabDiscovery(a){
 // so this is now an editable array of {label, pace} rows. Old-format data
 // (a plain object) is transparently migrated to the array the first time
 // it's read.
+/* Collapses zones with the same name (case/whitespace-insensitive) down to
+   one row, keeping the first occurrence. Blank/unnamed rows (label==="")
+   are left alone so "+ Add zone" can still add several new rows at once. */
+function dedupeZones(zones){
+  const seen = new Set();
+  const out = [];
+  for(const z of zones){
+    const key = (z.label||"").trim().toLowerCase();
+    if(key){
+      if(seen.has(key)) continue;
+      seen.add(key);
+    }
+    out.push(z);
+  }
+  return out;
+}
 function normalizePaceZones(a){
   const pz = a.plan && a.plan.paceZones;
-  if(Array.isArray(pz)) return pz;
+  if(Array.isArray(pz)) return dedupeZones(pz);
   const zoneKeys = ["Easy","Marathon","Threshold","Interval","Recovery"];
   if(pz && typeof pz==="object"){
     const fromOld = zoneKeys.filter(k=>pz[k]).map(k=>({label:k, pace:pz[k]}));
@@ -2848,7 +2864,10 @@ function wireTab(tab, a){
   }
   if(tab==="plan"){
     document.getElementById("saveZones").addEventListener("click", async ()=>{
-      const rows = document.querySelectorAll("#paceZoneRows [data-zi]");
+      // Scoped to .row-actions specifically — "#paceZoneRows [data-zi]" would
+      // also match the label input, pace input, and Remove button inside
+      // each row (all four carry data-zi), quadrupling every saved zone.
+      const rows = document.querySelectorAll("#paceZoneRows .row-actions[data-zi]");
       const zones = Array.from(rows).map(row=>{
         const zi = row.dataset.zi;
         const label = document.querySelector(`.zoneLabel[data-zi="${zi}"]`).value.trim();
