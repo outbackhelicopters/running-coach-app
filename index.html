@@ -964,6 +964,27 @@ async function submitToFormspree(payload){
     return { ok:false, error:e };
   }
 }
+// Saving a new lead to the athlete pipeline is the part that actually
+// matters (Formspree is just a notification copy) — a single failed
+// fetch here used to be silently swallowed, so a lead could email Tom
+// but never show up on his dashboard with no sign anything went wrong.
+// Retries a few times (transient network blips / a cold-started backend
+// are the common cause) before giving up, so the caller can flag it.
+async function postJsonWithRetry(url, body, attempts){
+  attempts = attempts || 3;
+  let lastErr = null;
+  for(let i=0;i<attempts;i++){
+    try{
+      const res = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+      if(res.ok) return { ok:true };
+      lastErr = new Error(`Request failed (${res.status})`);
+    }catch(e){
+      lastErr = e;
+    }
+    if(i < attempts-1) await new Promise(r=>setTimeout(r, 600*(i+1)));
+  }
+  return { ok:false, error:lastErr };
+}
 function waLink(number, text){
   if(!number) return null;
   return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
@@ -1779,10 +1800,9 @@ function renderInquiry(){
     const form = e.target;
     const data = readForm(form, INQUIRY_FIELDS);
     if(!data.name || !data.email || !data.reason){ toast("Please fill in the required fields"); return; }
-    try{
-      await fetch("/api/inquiry", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
-    }catch(e){ /* don't block the visitor over a transient network error */ }
-    const fr = await submitToFormspree({ _subject:`New inquiry: ${data.name}`, form:"inquiry", ...data });
+    const saved = await postJsonWithRetry("/api/inquiry", data);
+    const subjectPrefix = saved.ok ? "" : "⚠️ PIPELINE SAVE FAILED (add manually) — ";
+    const fr = await submitToFormspree({ _subject:`${subjectPrefix}New inquiry: ${data.name}`, form:"inquiry", pipelineSaved:saved.ok, ...data });
     showFormSuccess(fr, "Thanks — that's in! I'll be in touch shortly, usually within a day.");
   });
 }
@@ -1811,10 +1831,9 @@ function renderContact(){
     const form = e.target;
     const data = readForm(form, CONTACT_FIELDS);
     if(!data.name || !data.email || !data.question){ toast("Please fill in the required fields"); return; }
-    try{
-      await fetch("/api/inquiry", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ name:data.name, email:data.email, reason:data.question, source:"contact" }) });
-    }catch(e){ /* don't block the visitor over a transient network error */ }
-    const fr = await submitToFormspree({ _subject:`New question: ${data.name}`, form:"contact", ...data });
+    const saved = await postJsonWithRetry("/api/inquiry", { name:data.name, email:data.email, reason:data.question, source:"contact" });
+    const subjectPrefix = saved.ok ? "" : "⚠️ PIPELINE SAVE FAILED (add manually) — ";
+    const fr = await submitToFormspree({ _subject:`${subjectPrefix}New question: ${data.name}`, form:"contact", pipelineSaved:saved.ok, ...data });
     showFormSuccess(fr, "Thanks — got your question! I'll reply within a day.");
   });
 }
@@ -1872,18 +1891,16 @@ function renderQuestionnaire(athleteId){
     const missing = allFields.filter(f=>f.required && !data[f.id]);
     if(missing.length){ toast("Please fill in the required fields"); return; }
 
+    let saved;
     if(athleteId){
-      try{
-        await fetch(`/api/questionnaire/${encodeURIComponent(athleteId)}`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
-      }catch(e){ /* best effort — Formspree copy below still gets sent */ }
+      saved = await postJsonWithRetry(`/api/questionnaire/${encodeURIComponent(athleteId)}`, data);
     } else {
       // Brand-new visitor going straight to the full questionnaire (no
       // existing athlete record yet) — create one from scratch.
-      try{
-        await fetch("/api/questionnaire", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
-      }catch(e){ /* best effort — Formspree copy below still gets sent */ }
+      saved = await postJsonWithRetry("/api/questionnaire", data);
     }
-    const fr = await submitToFormspree({ _subject:`Questionnaire: ${data.fullName||"unknown"}`, form:"questionnaire", athleteId: athleteId||"", ...data });
+    const subjectPrefix = saved.ok ? "" : "⚠️ PIPELINE SAVE FAILED (add manually) — ";
+    const fr = await submitToFormspree({ _subject:`${subjectPrefix}Questionnaire: ${data.fullName||"unknown"}`, form:"questionnaire", athleteId: athleteId||"", pipelineSaved:saved.ok, ...data });
     showFormSuccess(fr, "Questionnaire received — thank you! I'll review this before we talk.");
   });
 }
