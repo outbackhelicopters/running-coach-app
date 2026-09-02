@@ -1098,6 +1098,7 @@ function daysUntil(dateStr){
   const today = new Date(); today.setHours(0,0,0,0);
   return Math.round((target-today)/86400000);
 }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
 function fmtDate(dateStr){
   if(!dateStr) return "—";
   const d = new Date(dateStr+"T00:00:00");
@@ -1160,7 +1161,7 @@ function buildSessionVEvent(a, week, session){
   const dtEnd = `${dateCompact}T${(parseInt(ICS_DEFAULT_HOUR.slice(0,2),10)+1).toString().padStart(2,"0")}${ICS_DEFAULT_HOUR.slice(2)}00`;
   const summary = icsEscape(`${session.type||"Training session"}${session.distance?" - "+session.distance+"km":""}`);
   const descParts = [];
-  if(session.pace) descParts.push("Pace: "+session.pace);
+  if(session.pace) descParts.push("Pace: "+session.pace+(session.paceScope==="hard"?" (hard/interval portions only — easy or recovery bits can be slower, or walked)":""));
   if(session.warmup) descParts.push("Warm-up: "+session.warmup);
   if(session.main) descParts.push("Main: "+session.main);
   if(session.cooldown) descParts.push("Cool-down: "+session.cooldown);
@@ -2564,9 +2565,9 @@ function tabPlan(a){
           ${(w.sessions||[]).length ? w.sessions.map((s,si)=>`
             <div class="list-item">
               <div class="meta">${esc(s.day||"")} ${s.completed?'<span class="tag">Completed</span>':''}</div>
-              <strong>${esc(s.type||"")}</strong> ${s.distance?`— ${esc(s.distance)}km`:""} ${s.pace?`@ ${esc(s.pace)}`:""}
+              <strong>${esc(s.type||"")}</strong> ${s.distance?`— ${esc(s.distance)}km`:""} ${s.pace?`@ ${esc(s.pace)}${s.paceScope==="hard"?" (hard portions only)":""}`:""}
               ${s.description?`<div class="muted" style="white-space:pre-wrap;">${esc(s.description)}</div>`:""}
-              ${s.completed && s.actual && s.actual.distance ? `<div class="muted">Actual: ${esc(s.actual.distance)}km, RPE ${esc(s.actual.rpe||"—")}${s.actual.notes?` — "${esc(s.actual.notes)}"`:""}</div>` : ""}
+              ${s.completed && s.actual && s.actual.distance ? `<div class="muted">${s.actual.date?`Completed ${fmtDate(s.actual.date)} — `:""}Actual: ${esc(s.actual.distance)}km, RPE ${esc(s.actual.rpe||"—")}${s.actual.notes?` — "${esc(s.actual.notes)}"`:""}</div>` : ""}
               <div class="row-actions">
                 <button class="btn btn-ghost btn-sm editSession" data-wi="${wi}" data-si="${si}">Edit</button>
                 <button class="btn btn-ghost btn-sm removeSession" data-wi="${wi}" data-si="${si}">Remove</button>
@@ -2583,7 +2584,7 @@ function tabPlan(a){
 function openSessionModal(a, wi, si){
   const week = getWeeks(a)[wi];
   const existing = (si!=null && week.sessions[si]) ? week.sessions[si] : null;
-  const s = existing || { day:"", type:"", distance:"", pace:"", description:"", warmup:"", main:"", cooldown:"", coachNotes:"" };
+  const s = existing || { day:"", type:"", distance:"", pace:"", paceScope:"", description:"", warmup:"", main:"", cooldown:"", coachNotes:"" };
   const wrap = document.createElement("div");
   wrap.className = "modal-backdrop";
   wrap.innerHTML = `
@@ -2600,7 +2601,15 @@ function openSessionModal(a, wi, si){
         <div class="field"><label>Distance (km)</label><input type="text" id="smDistance" value="${esc(s.distance)}"></div>
         <div class="field"><label>Pace</label><input type="text" id="smPace" value="${esc(s.pace)}" placeholder="6:45-7:00/km"></div>
       </div>
-      <div class="field"><label>Description</label><textarea id="smDesc">${esc(s.description)}</textarea></div>
+      <div class="field">
+        <label>Pace applies to</label>
+        <select id="smPaceScope">
+          <option value="" ${!s.paceScope?"selected":""}>Whole run</option>
+          <option value="hard" ${s.paceScope==="hard"?"selected":""}>Hard/interval portions only — easy or recovery bits can be slower, or walked</option>
+        </select>
+        <p class="muted" style="font-size:.72rem;margin-top:4px;">Athletes asked for this — it shows right next to the target pace so they know whether to hold it the whole way or just on the hard bits.</p>
+      </div>
+      <div class="field"><label>Description / what to expect</label><textarea id="smDesc" placeholder="e.g. This one's meant to feel hard — it's OK to walk the recovery jog between reps.">${esc(s.description)}</textarea></div>
       <div class="field"><label>Warm-up</label><textarea id="smWarmup">${esc(s.warmup)}</textarea></div>
       <div class="field"><label>Main session</label><textarea id="smMain">${esc(s.main)}</textarea></div>
       <div class="field"><label>Cool-down</label><textarea id="smCooldown">${esc(s.cooldown)}</textarea></div>
@@ -2621,13 +2630,14 @@ function openSessionModal(a, wi, si){
       type,
       distance: document.getElementById("smDistance").value.trim(),
       pace: document.getElementById("smPace").value.trim(),
+      paceScope: document.getElementById("smPaceScope").value,
       description: document.getElementById("smDesc").value.trim(),
       warmup: document.getElementById("smWarmup").value.trim(),
       main: document.getElementById("smMain").value.trim(),
       cooldown: document.getElementById("smCooldown").value.trim(),
       coachNotes: document.getElementById("smCoachNotes").value.trim(),
       completed: existing ? existing.completed : false,
-      actual: existing ? existing.actual : {distance:"",time:"",rpe:"",notes:""}
+      actual: existing ? existing.actual : {distance:"",time:"",rpe:"",notes:"",date:""}
     };
     if(existing){ week.sessions[si] = data; } else { week.sessions = week.sessions||[]; week.sessions.push(data); }
     await dbPut(a);
@@ -3515,13 +3525,13 @@ function avTraining(a){
               <span class="muted">${s.distance?esc(s.distance)+"km":""}${s.pace?` @ ${esc(s.pace)}`:""}</span>
             </div>
             <div class="session-detail" id="sd-${si}" style="display:none;">
-              ${s.pace?`<p><strong>Target pace:</strong> ${esc(s.pace)}</p>`:""}
+              ${s.pace?`<p><strong>Target pace${s.paceScope==="hard"?" (hard/interval portions only)":""}:</strong> ${esc(s.pace)}${s.paceScope==="hard"?` <span class="muted">— easy/recovery bits can be slower, or walked</span>`:""}</p>`:""}
+              ${s.description?`<p style="white-space:pre-wrap;">${esc(s.description)}</p>`:""}
               ${s.warmup?`<p><strong>Warm-up:</strong> <span style="white-space:pre-wrap;">${esc(s.warmup)}</span></p>`:""}
               ${s.main?`<p><strong>Main session:</strong> <span style="white-space:pre-wrap;">${esc(s.main)}</span></p>`:""}
               ${s.cooldown?`<p><strong>Cool-down:</strong> <span style="white-space:pre-wrap;">${esc(s.cooldown)}</span></p>`:""}
               ${s.coachNotes?`<p><strong>Coach notes:</strong> <span style="white-space:pre-wrap;">${esc(s.coachNotes)}</span></p>`:""}
-              ${!s.warmup && !s.main && !s.cooldown && !s.coachNotes && s.description ? `<p style="white-space:pre-wrap;">${esc(s.description)}</p>`:""}
-              ${s.completed ? `<p class="muted">Actual: ${esc(s.actual&&s.actual.distance||"—")}km, ${esc(s.actual&&s.actual.time||"—")}, RPE ${esc(s.actual&&s.actual.rpe||"—")}${s.actual&&s.actual.notes?` — "${esc(s.actual.notes)}"`:""}</p>` : `<button class="btn btn-primary btn-sm markCompleteBtn" data-si="${si}">Mark Complete</button>`}
+              ${s.completed ? `<p class="muted">${s.actual&&s.actual.date?`Completed ${fmtDate(s.actual.date)} — `:"Completed — "}Actual: ${esc(s.actual&&s.actual.distance||"—")}km, ${esc(s.actual&&s.actual.time||"—")}, RPE ${esc(s.actual&&s.actual.rpe||"—")}${s.actual&&s.actual.notes?` — "${esc(s.actual.notes)}"`:""}</p>` : `<button class="btn btn-primary btn-sm markCompleteBtn" data-si="${si}">Mark Complete</button>`}
               <button class="btn btn-ghost btn-sm avAddSessionCal" data-si="${si}" style="margin-left:6px;">📅 Add to calendar</button>
             </div>
           </div>
@@ -3546,6 +3556,7 @@ function openCompleteSessionModal(a, si){
     <div class="modal-box">
       <h3>Mark "${esc(s.type)}" complete</h3>
       <p class="muted">How did the session feel?</p>
+      <div class="field"><label>Date completed</label><input type="date" id="mcDate" value="${esc(todayISO())}"></div>
       <div class="field"><label>Actual distance (km)</label><input type="text" id="mcDistance" value="${esc(s.distance||"")}"></div>
       <div class="field"><label>Actual time</label><input type="text" id="mcTime" placeholder="e.g. 42 min"></div>
       <div class="field"><label>Effort (RPE 1–10)</label><input type="number" min="1" max="10" id="mcRpe"></div>
@@ -3559,6 +3570,7 @@ function openCompleteSessionModal(a, si){
   wrap.querySelector("#mcCancel").addEventListener("click", ()=>wrap.remove());
   wrap.querySelector("#mcSave").addEventListener("click", async ()=>{
     const actual = {
+      date: document.getElementById("mcDate").value || todayISO(),
       distance: document.getElementById("mcDistance").value.trim(),
       time: document.getElementById("mcTime").value.trim(),
       rpe: document.getElementById("mcRpe").value.trim(),
